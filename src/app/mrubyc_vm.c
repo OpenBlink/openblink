@@ -45,7 +45,7 @@ LOG_MODULE_REGISTER(app_mrubyc_vm, LOG_LEVEL_DBG);
 /**
  * @brief Flag indicating if VM reload is pending
  */
-static bool request_mruby_reload = false;
+static bool request_mruby_reload = true;
 
 /**
  * @brief Loads bytecode from storage or default slots
@@ -139,8 +139,27 @@ static void mrubyc_vm_main(void *, void *, void *) {
     api_blink_define();  // Blink.*
 
     ////////////////////
+    // If no reload request, wait for request
+    if (false == request_mruby_reload) {
+#if CONFIG_DEBUG
+      uint8_t i = 99;
+      while (false == request_mruby_reload) {
+        k_msleep(100);
+        i++;
+        if (0 == (i % 100)) {
+          ble_print("Abnormal end was detected. Waiting for Blink.");
+          i = 0;
+        }
+      }
+#else
+      ble_print("Abnormal end was detected. Factory reset is in progress.");
+      init_factory_reset();
+#endif
+    }
     // Clear reload request flag
     request_mruby_reload = false;
+
+    ////////////////////
     // Load mruby bytecode
     load_bytecode(kBlinkSlot1, bytecode_slot1,
                   sizeof(bytecode_slot1) / sizeof(bytecode_slot1[0]));
