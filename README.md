@@ -20,6 +20,10 @@ $ git submodule init
 $ git submodule update
 ```
 
+## Documentation
+
+For more detailed documentation, please check the [doc](./doc)
+
 ## Verified Hardware
 
 The following hardware platforms have been tested with OpenBlink:
@@ -52,6 +56,10 @@ $ git submodule init
 $ git submodule update
 ```
 
+## 文档
+
+有关更详细的文档，请查看[doc](./doc)
+
 ## 已验证的硬件
 
 以下硬件平台已通过 OpenBlink 测试：
@@ -83,6 +91,10 @@ $ git clone https://github.com/OpenBlink/openblink.git
 $ git submodule init
 $ git submodule update
 ```
+
+## ドキュメント
+
+より詳細なドキュメントについては、[doc](./doc)をご確認ください。
 
 ## 検証済みハードウェア
 
