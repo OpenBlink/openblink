@@ -27,6 +27,8 @@ $ git submodule update
 
 より詳細なドキュメントについては、[doc](./doc)をご確認ください。
 
+総合的なドキュメントとコミュニティサポートは、[DeepWiki](https://deepwiki.com/OpenBlink/openblink)をご覧ください。
+
 ## 検証済みハードウェア
 
 以下のハードウェアプラットフォームが OpenBlink でテスト済みです：
