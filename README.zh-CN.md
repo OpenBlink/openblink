@@ -27,7 +27,7 @@ $ git submodule update
 
 有关更详细的文档，请查看[doc](./doc)
 
-如需查阅完整文档和获取社区支持，请访问 [DeepWiki](https://deepwiki.com/OpenBlink/openblink)
+如需查阅AI驱动的全面文档以帮助您理解代码库，请访问 [DeepWiki](https://deepwiki.com/OpenBlink/openblink)
 
 ## 已验证的硬件
 
