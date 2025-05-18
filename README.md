@@ -27,7 +27,7 @@ $ git submodule update
 
 For more detailed documentation, please check the [doc](./doc)
 
-For AI-powered comprehensive documentation that helps you understand the codebase, visit [DeepWiki](https://deepwiki.com/OpenBlink/openblink)
+For AI-powered comprehensive documentation that helps you understand the codebase, visit [DeepWiki](https://deepwiki.com/OpenBlink/openblink).
 
 ## Verified Hardware
 
