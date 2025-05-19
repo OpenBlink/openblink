@@ -134,7 +134,9 @@
 
 CRC16 校验和使用`crc16_reflect`函数计算，参数如下：
 
-- 初始值：0xd175
-- 多项式：0xFFFF
+- 初始值：0xFFFF
+- 多项式：0xd175（为数据长度高达 32751 位提供汉明距离 4 保护）
 - 输入：字节码缓冲区
 - 长度：字节码长度
+
+参考文献: https://users.ece.cmu.edu/~koopman/crc/index.html
