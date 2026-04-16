@@ -9,16 +9,22 @@
 
 **_OpenBlink_** is an open source project forked from **_ViXion Blink_**.
 
-- Ruby, a highly productive lightweight language, can be used to develop embedded devices.
-- Program rewriting and debugging console are completely wireless. (BluetoothLE)
-- Rewriting time is less than 0.1 second and does not involve a microprocessor restart. (We call it "Blink".)
-
-**Key ideas:**
-
-- **Instant rewriting** — Ruby code changes are reflected on the real device in < 0.1 sec, without microcontroller restart
+- **Instant rewriting** — Ruby code changes are reflected on the real device in < 0.1 sec, without microcontroller restart (we call this "Blink")
 - **Fully wireless** — All program transfer and debug console output run over Bluetooth LE — no cables needed
 - **Ruby for embedded** — Use [mruby/c](https://github.com/mrubyc/mrubyc), a lightweight Ruby VM, to develop for microcontrollers with high productivity and readability
 - **For everyone** — Not just for embedded engineers. Designed for system designers, mechanical engineers, hobbyists, students, and end users who want to customize their own devices ("DIY-able value")
+
+## Table of Contents
+
+- [OpenBlink Ecosystem](#openblink-ecosystem)
+- [Philosophy & Goals](#philosophy--goals)
+- [Getting Started](#getting-started)
+- [Verified Hardware](#verified-hardware)
+- [Development Environment Versions](#development-environment-versions)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ## OpenBlink Ecosystem
 
@@ -111,30 +117,73 @@ OpenBlink places great importance on the **joy of hacking on real hardware**. Ev
 
 These qualities come together to create a **happy hacking experience** for everyone who builds and blinks.
 
-## How to Get OpenBlink
+## Getting Started
 
-To clone the repository and initialize the submodules, run the following commands:
+### Prerequisites
+
+Before building OpenBlink, set up the following:
+
+- **nRF Connect SDK** v3.2.1 — see the [official installation guide](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html)
+- **nRF Connect SDK toolchain** v3.2.1
+- **west** (installed with the nRF Connect SDK)
+
+### Clone the repository
 
 ```console
 $ git clone https://github.com/OpenBlink/openblink.git
-$ git submodule init
-$ git submodule update
+$ cd openblink
+$ git submodule update --init --recursive
 ```
 
-## Documentation
+### Build
 
-For more detailed documentation, please check the [doc](./doc)
+Select the board target that matches your hardware:
 
-For AI-powered comprehensive documentation that helps you understand the codebase, visit [DeepWiki](https://deepwiki.com/OpenBlink/openblink)
+```console
+# nRF54L15-DK
+$ west build -b nrf54l15dk/nrf54l15/cpuapp --sysbuild
+
+# nRF52840-DK
+$ west build -b nrf52840dk/nrf52840 --sysbuild
+```
+
+### Flash
+
+```console
+$ west flash
+```
+
+Once flashing completes, the device starts advertising over BLE as `OpenBlink`. Connect from the [VSCode extension](https://github.com/OpenBlink/openblink-vscode-extension) or the [Web IDE](https://github.com/OpenBlink/openblink-webide) to start Blinking.
 
 ## Verified Hardware
 
 The following hardware platforms have been tested with OpenBlink:
 
-- Nordic nRF54L15-DK (Board target: nrf54l15dk/nrf54l15/cpuapp)
-- Nordic nRF52840-DK (Board target: nrf52840dk/nrf52840)
+- Nordic nRF54L15-DK (Board target: `nrf54l15dk/nrf54l15/cpuapp`)
+- Nordic nRF52840-DK (Board target: `nrf52840dk/nrf52840`)
 
 ## Development Environment Versions
 
 - nRF Connect SDK toolchain v3.2.1
 - nRF Connect SDK v3.2.1
+
+## Documentation
+
+- **[mruby API Specification](./doc/mruby_api.md)** — Ruby classes and methods available on OpenBlink devices
+- **[Bluetooth Communication Specification](./doc/bluetooth_specification.md)** — BLE service, characteristics, and Blink protocol details
+- **[DeepWiki](https://deepwiki.com/OpenBlink/openblink)** — AI-powered comprehensive documentation of the codebase
+- **[doc/](./doc)** — Full documentation directory, including translated versions
+
+## Contributing
+
+Contributions are welcome! Feel free to open [issues](https://github.com/OpenBlink/openblink/issues) or submit [pull requests](https://github.com/OpenBlink/openblink/pulls) on GitHub. When reporting a bug, please include the board target, SDK version, and steps to reproduce.
+
+## License
+
+OpenBlink is released under the **BSD 3-Clause License**. See [LICENSE](./LICENSE) for the full text.
+
+## Acknowledgments
+
+- **ViXion Blink** — OpenBlink is forked from ViXion Blink
+- **[mruby/c](https://github.com/mrubyc/mrubyc)** — Lightweight Ruby VM for microcontrollers
+- **[Zephyr RTOS](https://www.zephyrproject.org/)** and **[nRF Connect SDK](https://www.nordicsemi.com/Products/Development-software/nrf-connect-sdk)** — RTOS and SDK foundation

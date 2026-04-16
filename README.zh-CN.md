@@ -9,16 +9,22 @@
 
 **_OpenBlink_** 是一个从 **_ViXion Blink_** 分叉的开源项目。
 
-- 可以使用高生产力的轻量级语言 Ruby 来开发嵌入式设备。
-- 程序重写和调试控制台完全无线。（蓝牙低功耗）
-- 重写时间少于 0.1 秒，不需要微处理器重启。（我们称之为"Blink"）
-
-**核心理念：**
-
-- **即时重写** — Ruby 代码的更改在不到 0.1 秒内反映到实际设备上，无需微控制器重启
+- **即时重写** — Ruby 代码的更改在不到 0.1 秒内反映到实际设备上，无需微控制器重启（我们称之为"Blink"）
 - **完全无线** — 所有程序传输和调试控制台输出均通过蓝牙低功耗运行，无需线缆
 - **嵌入式中的 Ruby** — 使用面向微控制器的轻量级 Ruby VM [mruby/c](https://github.com/mrubyc/mrubyc)，以高生产力和高可读性进行开发
 - **面向所有人** — 不仅面向嵌入式工程师，还面向系统设计师、机械工程师、爱好者、学生以及希望定制自己设备的终端用户（"可 DIY 的价值"）
+
+## 目录
+
+- [OpenBlink 生态系统](#openblink-生态系统)
+- [理念与目标](#理念与目标)
+- [快速开始](#快速开始)
+- [已验证的硬件](#已验证的硬件)
+- [开发环境版本](#开发环境版本)
+- [文档](#文档)
+- [贡献](#贡献)
+- [许可证](#许可证)
+- [致谢](#致谢)
 
 ## OpenBlink 生态系统
 
@@ -111,30 +117,73 @@ OpenBlink 非常重视**在真实硬件上进行黑客创造的乐趣**。每一
 
 这些特质共同为每一位 Build & Blink 的人创造了**快乐的黑客体验**。
 
-## 如何获取 OpenBlink
+## 快速开始
 
-要克隆仓库并初始化子模块，请运行以下命令：
+### 前置条件
+
+在构建 OpenBlink 之前，请准备以下开发环境：
+
+- **nRF Connect SDK** v3.2.1 — 请参阅 [官方安装指南](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html)
+- **nRF Connect SDK 工具链** v3.2.1
+- **west**（随 nRF Connect SDK 一同安装）
+
+### 克隆仓库
 
 ```console
 $ git clone https://github.com/OpenBlink/openblink.git
-$ git submodule init
-$ git submodule update
+$ cd openblink
+$ git submodule update --init --recursive
 ```
 
-## 文档
+### 构建
 
-有关更详细的文档，请查看[doc](./doc)
+请根据你的硬件选择板目标：
 
-如需查阅AI驱动的全面文档以帮助您理解代码库，请访问 [DeepWiki](https://deepwiki.com/OpenBlink/openblink)
+```console
+# nRF54L15-DK
+$ west build -b nrf54l15dk/nrf54l15/cpuapp --sysbuild
+
+# nRF52840-DK
+$ west build -b nrf52840dk/nrf52840 --sysbuild
+```
+
+### 烧录
+
+```console
+$ west flash
+```
+
+烧录完成后，设备会以 `OpenBlink` 为名开始 BLE 广播。通过 [VSCode 扩展](https://github.com/OpenBlink/openblink-vscode-extension) 或 [Web IDE](https://github.com/OpenBlink/openblink-webide) 连接即可开始 Blink。
 
 ## 已验证的硬件
 
 以下硬件平台已通过 OpenBlink 测试：
 
-- Nordic nRF54L15-DK (Board target: nrf54l15dk/nrf54l15/cpuapp)
-- Nordic nRF52840-DK (Board target: nrf52840dk/nrf52840)
+- Nordic nRF54L15-DK (Board target: `nrf54l15dk/nrf54l15/cpuapp`)
+- Nordic nRF52840-DK (Board target: `nrf52840dk/nrf52840`)
 
 ## 开发环境版本
 
 - nRF Connect SDK toolchain v3.2.1
 - nRF Connect SDK v3.2.1
+
+## 文档
+
+- **[mruby API 规范](./doc/mruby_api.zh-CN.md)** — OpenBlink 设备上可用的 Ruby 类和方法
+- **[Bluetooth 通信规范](./doc/bluetooth_specification.zh-CN.md)** — BLE 服务、特征和 Blink 协议的详细信息
+- **[DeepWiki](https://deepwiki.com/OpenBlink/openblink)** — 由 AI 驱动的代码库综合文档
+- **[doc/](./doc)** — 完整的文档目录（包含各语言翻译版本）
+
+## 贡献
+
+欢迎贡献！请随时通过 GitHub 提交 [Issues](https://github.com/OpenBlink/openblink/issues) 或 [Pull Requests](https://github.com/OpenBlink/openblink/pulls)。提交 bug 时，请附上板目标、SDK 版本和复现步骤。
+
+## 许可证
+
+OpenBlink 采用 **BSD 3-Clause License** 发布。完整文本请参阅 [LICENSE](./LICENSE)。
+
+## 致谢
+
+- **ViXion Blink** — OpenBlink 从 ViXion Blink 分叉而来
+- **[mruby/c](https://github.com/mrubyc/mrubyc)** — 面向微控制器的轻量级 Ruby VM
+- **[Zephyr RTOS](https://www.zephyrproject.org/)** 和 **[nRF Connect SDK](https://www.nordicsemi.com/Products/Development-software/nrf-connect-sdk)** — 基础 RTOS 和 SDK
