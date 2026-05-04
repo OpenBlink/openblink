@@ -27,7 +27,6 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/util.h>
 
-#include "../app/comm.h"
 #include "ble_blink.h"
 
 LOG_MODULE_REGISTER(drv_ble, LOG_LEVEL_DBG);
@@ -54,11 +53,11 @@ static struct bt_gatt_exchange_params exchange_params;
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
                             struct bt_gatt_exchange_params *params) {
   if (err) {
-    printk("Failed MTU exchange (err %u)\n", err);
+    LOG_ERR("BLE: Failed MTU exchange (err %u)", err);
     return;
   }
   uint16_t mtu = bt_gatt_get_mtu(conn);
-  printk("Negotiated MTU: %u\n", mtu);
+  LOG_INF("BLE: Negotiated MTU: %u", mtu);
 }
 
 /**
@@ -97,7 +96,7 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
   exchange_params.func = mtu_exchange_cb;
   int ret = bt_gatt_exchange_mtu(conn, &exchange_params);
   if (ret) {
-    printk("Failed start MTU exchange (err %d)\n", ret);
+    LOG_ERR("BLE: Failed to start MTU exchange (err %d)", ret);
   }
 
   {
