@@ -309,11 +309,13 @@ static struct bt_gatt_attr attrs[] = {
                            BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL,
                            NULL),
     BT_GATT_CCC(on_cccd_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    // Program: 4, [5]
+    // Program: 4, [5], 6
     BT_GATT_CHARACTERISTIC(BT_UUID_OPEN_BLINK_PROGRAM_CHARACTERISTIC_UUID,
-                           BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                           BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
+                               BT_GATT_CHRC_NOTIFY,
                            BT_GATT_PERM_WRITE, NULL, blink_write_program, NULL),
-    // MTU: 6, [7]
+    BT_GATT_CCC(on_cccd_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    // MTU: 7, [8]
     BT_GATT_CHARACTERISTIC(BT_UUID_OPEN_BLINK_STATUS_CHARACTERISTIC_UUID,
                            BT_GATT_CHRC_READ, BT_GATT_PERM_READ, blink_read_mtu,
                            NULL, NULL),
@@ -324,7 +326,7 @@ static struct bt_gatt_attr attrs[] = {
 /** @brief Index of program characteristic in the attributes array */
 #define SERVICE_BLINK_PROGRAM 5  // [5]
 /** @brief Index of status characteristic in the attributes array */
-#define SERVICE_BLINK_STATUS 7  // [7]
+#define SERVICE_BLINK_STATUS 8  // [8]
 
 /** @brief GATT service definition */
 static struct bt_gatt_service service = BT_GATT_SERVICE(attrs);
