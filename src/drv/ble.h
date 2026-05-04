@@ -123,4 +123,13 @@ int ble_stop_advertising();
  */
 uint16_t ble_get_mtu();
 
+/**
+ * @brief Gets the current BLE state
+ *
+ * @details Derives state from Zephyr standard APIs
+ *
+ * @return int 0=Off, 1=Advertising, 2=Connected
+ */
+int ble_get_state(void);
+
 #endif  // DRV_BLE_H

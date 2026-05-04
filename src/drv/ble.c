@@ -420,3 +420,23 @@ int ble_stop_advertising() {
  * @return uint16_t Current MTU size in bytes
  */
 uint16_t ble_get_mtu() { return bt_gatt_get_mtu(ble_context.conn); }
+
+/**
+ * @brief Gets the current BLE state
+ *
+ * @details Derives state from Zephyr standard APIs:
+ *          - Connected: ble_context.conn != NULL (bt_conn_ref managed)
+ *          - Advertising: bt_is_ready() && not connected
+ *          - Off: BLE stack not initialized
+ *
+ * @return int 0=Off, 1=Advertising, 2=Connected
+ */
+int ble_get_state(void) {
+  if (ble_context.conn != NULL) {
+    return 2;
+  }
+  if (bt_is_ready()) {
+    return 1;
+  }
+  return 0;
+}
