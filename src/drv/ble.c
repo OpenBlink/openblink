@@ -34,9 +34,6 @@ LOG_MODULE_REGISTER(drv_ble, LOG_LEVEL_DBG);
 /** @brief Global BLE context */
 BLE_CONTEXT ble_context;
 
-/** @brief Semaphore for BLE initialization synchronization */
-static K_SEM_DEFINE(ble_init_ok, 0, 1);
-
 /** @brief Work item for restarting advertising from system workqueue */
 static struct k_work adv_work;
 
@@ -272,23 +269,6 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 };
 
 /**
- * @brief Bluetooth ready callback
- *
- * @details Called when Bluetooth initialization is complete
- *
- * @param err Error code (0 for success)
- */
-static void bt_ready(int err) {
-  if (err) {
-    LOG_ERR("BLE: init failed with error code %d", err);
-    return;
-  }
-
-  // Complete the initialization
-  k_sem_give(&ble_init_ok);
-}
-
-/**
  * @brief Initializes the BLE subsystem
  *
  * @details Sets up the BLE stack, registers callbacks, and initializes the
@@ -309,18 +289,11 @@ int ble_init(BLE_CALLBACK cb) {
   // Initialize advertising work item
   k_work_init(&adv_work, adv_work_handler);
 
-  // Enable Bluetooth
+  // Enable Bluetooth (synchronous: blocks until BLE stack is ready)
   LOG_DBG("BLE: bt_enable()");
-  err = bt_enable(bt_ready);
+  err = bt_enable(NULL);
   if (err) {
-    LOG_ERR("BLE: initialization failed");
-    return err;
-  }
-
-  // Wait for bt_ready callback to complete
-  err = k_sem_take(&ble_init_ok, K_SECONDS(5));
-  if (err) {
-    LOG_ERR("BLE: initialization timed out");
+    LOG_ERR("BLE: initialization failed (err %d)", err);
     return err;
   }
 
