@@ -105,9 +105,6 @@ typedef struct {
 
 // -------------------------------------------------------------------------------------------
 
-/** @brief External reference to BLE context */
-extern BLE_CONTEXT ble_context;
-
 /** @brief Buffer for storing received bytecode */
 static uint8_t blink_bytecode[BLINK_MAX_BYTECODE_SIZE] = {0};
 
@@ -312,11 +309,13 @@ static struct bt_gatt_attr attrs[] = {
                            BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL,
                            NULL),
     BT_GATT_CCC(on_cccd_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
-    // Program: 4, [5]
+    // Program: 4, [5], 6
     BT_GATT_CHARACTERISTIC(BT_UUID_OPEN_BLINK_PROGRAM_CHARACTERISTIC_UUID,
-                           BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                           BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
+                               BT_GATT_CHRC_NOTIFY,
                            BT_GATT_PERM_WRITE, NULL, blink_write_program, NULL),
-    // MTU: 6, [7]
+    BT_GATT_CCC(on_cccd_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    // MTU: 7, [8]
     BT_GATT_CHARACTERISTIC(BT_UUID_OPEN_BLINK_STATUS_CHARACTERISTIC_UUID,
                            BT_GATT_CHRC_READ, BT_GATT_PERM_READ, blink_read_mtu,
                            NULL, NULL),
@@ -327,7 +326,7 @@ static struct bt_gatt_attr attrs[] = {
 /** @brief Index of program characteristic in the attributes array */
 #define SERVICE_BLINK_PROGRAM 5  // [5]
 /** @brief Index of status characteristic in the attributes array */
-#define SERVICE_BLINK_STATUS 7  // [7]
+#define SERVICE_BLINK_STATUS 8  // [8]
 
 /** @brief GATT service definition */
 static struct bt_gatt_service service = BT_GATT_SERVICE(attrs);
@@ -339,17 +338,28 @@ static struct bt_gatt_service service = BT_GATT_SERVICE(attrs);
  * @return int 0 on success, negative on error
  */
 static int notify_blink_program(const char *data) {
+  struct bt_conn *conn = ble_context.conn;
+  if (conn == NULL) {
+    return 0;
+  }
+
+  // Take our own reference to ensure the connection object remains valid
+  // even if on_disconnected fires concurrently from the BT thread.
+  conn = bt_conn_ref(conn);
+
   int err = 0;
   const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_PROGRAM];
-
-  if (bt_gatt_is_subscribed(ble_context.conn, attr, BT_GATT_CCC_NOTIFY)) {
-    size_t size = strlen(data);
-
-    err = bt_gatt_notify(ble_context.conn, attr, data, size);
-    if (err) {
-      LOG_ERR("BLE: unable to send notification");
-    }
+  if (!bt_gatt_is_subscribed(conn, attr, BT_GATT_CCC_NOTIFY)) {
+    bt_conn_unref(conn);
+    return 0;
   }
+
+  size_t size = strlen(data);
+  err = bt_gatt_notify(conn, attr, data, size);
+  if (err) {
+    LOG_ERR("BLE: unable to send program notification");
+  }
+  bt_conn_unref(conn);
   return err;
 }
 
@@ -375,17 +385,27 @@ int ble_blink_init() {
  * @return int 0 on success, negative on error
  */
 int ble_print(const char *data) {
-  int err = 0;
-  const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_CONSOLE];
-
-  if (bt_gatt_is_subscribed(ble_context.conn, attr, BT_GATT_CCC_NOTIFY)) {
-    size_t size = strlen(data);
-
-    err = bt_gatt_notify(ble_context.conn, attr, data, size);
-    if (err) {
-      LOG_ERR("BLE: unable to send notification");
-    }
+  struct bt_conn *conn = ble_context.conn;
+  if (conn == NULL) {
+    return 0;
   }
 
+  // Take our own reference to ensure the connection object remains valid
+  // even if on_disconnected fires concurrently from the BT thread.
+  conn = bt_conn_ref(conn);
+
+  int err = 0;
+  const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_CONSOLE];
+  if (!bt_gatt_is_subscribed(conn, attr, BT_GATT_CCC_NOTIFY)) {
+    bt_conn_unref(conn);
+    return 0;
+  }
+
+  size_t size = strlen(data);
+  err = bt_gatt_notify(conn, attr, data, size);
+  if (err) {
+    LOG_ERR("BLE: unable to send console notification");
+  }
+  bt_conn_unref(conn);
   return err;
 }

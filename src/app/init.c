@@ -14,6 +14,7 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/reboot.h>
 
@@ -125,12 +126,23 @@ fn_t init_reboot(void) {
 /**
  * @brief Performs a factory reset of the device
  *
- * @details Deletes all bytecode from both storage slots
+ * @details Deletes all bytecode from both storage slots and clears any
+ * Bluetooth bonding information from flash storage.
  *
  * @return fn_t kSuccess if successful
  */
 fn_t init_factory_reset(void) {
   blink_delete(kBlinkSlot1);
   blink_delete(kBlinkSlot2);
+
+  // Clear all Bluetooth bonding/pairing information.
+  // BT_ADDR_LE_ANY as the address removes bonds for all peers.
+  // This ensures a completely clean state after factory reset,
+  // regardless of whether bonding is currently enabled or not.
+  int err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+  if (err && err != -ENOENT) {
+    LOG_WRN("Factory reset: failed to clear bonding info (err %d)", err);
+  }
+
   return kSuccess;
 }

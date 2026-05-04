@@ -10,7 +10,7 @@
 #include "ble.h"
 
 #include "../../mrubyc/src/mrubyc.h"
-#include "../app/comm.h"
+#include "../drv/ble.h"
 #include "../lib/fn.h"
 
 /**
@@ -47,16 +47,5 @@ fn_t api_ble_define(void) {
  * @param argc The argument count
  */
 static void c_get_ble(mrb_vm *vm, mrb_value *v, int argc) {
-  enum {
-    kOff = 0,         /**< BLE is off */
-    kAdvertising = 1, /**< BLE is advertising */
-    kConnected = 2,   /**< BLE is connected */
-  };
-  if (true == comm_get_advertising()) {
-    SET_INT_RETURN(kAdvertising);
-  } else if (true == comm_get_connected()) {
-    SET_INT_RETURN(kConnected);
-  } else {
-    SET_INT_RETURN(kOff);
-  }
+  SET_INT_RETURN(ble_get_state());
 }

@@ -10,7 +10,6 @@
 #include "comm.h"
 
 #include <math.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,12 +28,6 @@
 
 LOG_MODULE_REGISTER(app_comm, LOG_LEVEL_DBG);
 
-/** @brief Flag indicating if BLE advertising is active */
-static volatile bool advertising = false;
-
-/** @brief Flag indicating if BLE is connected to a device */
-static volatile bool connected = false;
-
 /**
  * @brief BLE event callback function
  *
@@ -50,14 +43,10 @@ static int ble_event_cb(BLE_PARAM* param) {
 
     case BLE_EVENT_CONNECTED:
       LOG_DBG("COMM: Connected");
-      connected = true;
-      advertising = false;
       break;
 
     case BLE_EVENT_DISCONNECTED:
       LOG_DBG("COMM: Disconnected (%d)", param->disconnected.reason);
-      connected = false;
-      advertising = true;
       break;
 
     case BLE_EVENT_RECEIVED:
@@ -116,7 +105,11 @@ fn_t comm_init(void) {
   fn_t ret = kSuccess;
   char device_name[BLINK_DEVICE_NAME_SIZE] = {0};
 
-  ble_init(ble_event_cb);
+  int err = ble_init(ble_event_cb);
+  if (err) {
+    LOG_ERR("COMM: BLE initialization failed (err %d)", err);
+    return kFailure;
+  }
 
   // Set Device Name
   blink_get_name(device_name, sizeof(device_name));
@@ -125,27 +118,14 @@ fn_t comm_init(void) {
   // Start Advertising
   const char* name = bt_get_name();
   LOG_DBG("COMM: Start advertising (%s)", name);
-  ble_start_advertising(name);
-  advertising = true;
+  err = ble_start_advertising(name);
+  if (err) {
+    LOG_ERR("COMM: Failed to start advertising (err %d)", err);
+    return kFailure;
+  }
 
   return ret;
 }
-
-/**
- * @brief Checks if BLE advertising is active
- *
- * @return true if advertising is active
- * @return false if advertising is not active
- */
-bool comm_get_advertising(void) { return advertising; }
-
-/**
- * @brief Checks if BLE is connected to a device
- *
- * @return true if connected
- * @return false if not connected
- */
-bool comm_get_connected(void) { return connected; }
 
 /**
  * @brief Disconnects the current BLE connection

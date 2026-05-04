@@ -10,8 +10,6 @@
 #ifndef APP_COMM_H
 #define APP_COMM_H
 
-#include <stdbool.h>
-
 #include "../lib/fn.h"
 
 /**
@@ -20,22 +18,6 @@
  * @return fn_t kSuccess if successful, kFailure otherwise
  */
 fn_t comm_init(void);
-
-/**
- * @brief Checks if BLE advertising is active
- *
- * @return true if advertising is active
- * @return false if advertising is not active
- */
-bool comm_get_advertising(void);
-
-/**
- * @brief Checks if BLE is connected to a device
- *
- * @return true if connected
- * @return false if not connected
- */
-bool comm_get_connected(void);
 
 /**
  * @brief Disconnects the current BLE connection
