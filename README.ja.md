@@ -123,8 +123,8 @@ OpenBlink は**実機でハッキングする喜び**を大切にしています
 
 OpenBlink をビルドする前に、以下の開発環境をセットアップしてください：
 
-- **nRF Connect SDK** v3.2.1 — [公式インストールガイド](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html) を参照
-- **nRF Connect SDK ツールチェーン** v3.2.1
+- **nRF Connect SDK** v3.3.0 — [公式インストールガイド](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html) を参照
+- **nRF Connect SDK ツールチェーン** v3.3.0
 - **west**（nRF Connect SDK と一緒にインストールされます）
 
 ### リポジトリのクローン
@@ -164,8 +164,8 @@ $ west flash
 
 ## 開発環境バージョン
 
-- nRF Connect SDK toolchain v3.2.1
-- nRF Connect SDK v3.2.1
+- nRF Connect SDK toolchain v3.3.0
+- nRF Connect SDK v3.3.0
 
 ## ドキュメント
 
