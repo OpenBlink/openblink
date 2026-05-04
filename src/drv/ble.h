@@ -11,10 +11,14 @@
 #ifndef DRV_BLE_H
 #define DRV_BLE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zephyr/types.h>
+
+/** @brief Default ATT MTU when not connected (Zephyr does not expose a public constant) */
+#define BLE_ATT_MTU_DEFAULT 23
 
 #include "ble_blink.h"
 
@@ -82,8 +86,9 @@ typedef int (*BLE_CALLBACK)(BLE_PARAM *param);
  * @details Stores connection and callback information
  */
 typedef struct {
-  struct bt_conn *conn;  /**< Bluetooth connection handle */
-  BLE_CALLBACK event_cb; /**< Event callback function */
+  struct bt_conn *conn;     /**< Bluetooth connection handle */
+  BLE_CALLBACK event_cb;  /**< Event callback function */
+  bool advertising;       /**< Whether advertising is currently active */
 } BLE_CONTEXT;
 
 /** @brief Global BLE context (defined in ble.c) */

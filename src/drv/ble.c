@@ -72,6 +72,9 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
     return;
   }
 
+  if (ble_context.conn) {
+    bt_conn_unref(ble_context.conn);
+  }
   ble_context.conn = bt_conn_ref(conn);
 
   // bt_conn_get_info() is for logging only; failure does not affect connection tracking
@@ -244,6 +247,7 @@ static void on_le_data_length_updated(struct bt_conn *conn,
  * @param work Work item pointer
  */
 static void adv_work_handler(struct k_work *work) {
+  ARG_UNUSED(work);
   int err = ble_start_advertising(bt_get_name());
   if (err) {
     LOG_ERR("BLE: Failed to restart advertising (err %d)", err);
@@ -258,7 +262,10 @@ static void adv_work_handler(struct k_work *work) {
  */
 static void on_recycled(void) {
   LOG_DBG("BLE: Connection object recycled, restarting advertising");
-  k_work_submit(&adv_work);
+  int ret = k_work_submit(&adv_work);
+  if (ret && ret != -EALREADY) {
+    LOG_WRN("BLE: Failed to submit advertising work (err %d)", ret);
+  }
 }
 
 /**
@@ -327,7 +334,10 @@ int ble_init(BLE_CALLBACK cb) {
 
   // Load settings after BLE stack is ready
   LOG_DBG("BLE: settings_load()");
-  settings_load();
+  int settings_err = settings_load();
+  if (settings_err) {
+    LOG_WRN("BLE: settings_load() returned err %d", settings_err);
+  }
 
   // Clear any stale bonding information from flash.
   // Currently CONFIG_BT_BONDABLE=n, so no new bonds are created at runtime.
@@ -414,6 +424,9 @@ int ble_start_advertising(const char *local_name) {
                         ARRAY_SIZE(sd));
   if (err) {
     LOG_ERR("BLE: Advertising failed to start (err %d)", err);
+    ble_context.advertising = false;
+  } else {
+    ble_context.advertising = true;
   }
 
   return err;
@@ -428,6 +441,8 @@ int ble_stop_advertising() {
   int err = bt_le_adv_stop();
   if (err) {
     LOG_ERR("BLE: Failed to stop advertising (err %d)", err);
+  } else {
+    ble_context.advertising = false;
   }
   return err;
 }
@@ -440,7 +455,7 @@ int ble_stop_advertising() {
 uint16_t ble_get_mtu() {
   struct bt_conn *conn = ble_context.conn;
   if (conn == NULL) {
-    return 23;  // Default ATT MTU
+    return BLE_ATT_MTU_DEFAULT;
   }
 
   // Take our own reference to ensure the connection object remains valid
@@ -453,9 +468,9 @@ uint16_t ble_get_mtu() {
 /**
  * @brief Gets the current BLE state
  *
- * @details Derives state from Zephyr standard APIs:
+ * @details Derives state from driver-managed state:
  *          - Connected: ble_context.conn != NULL (bt_conn_ref managed)
- *          - Advertising: bt_is_ready() && not connected
+ *          - Advertising: ble_context.advertising && not connected
  *          - Off: BLE stack not initialized
  *
  * @return int 0=Off, 1=Advertising, 2=Connected
@@ -464,7 +479,7 @@ int ble_get_state(void) {
   if (ble_context.conn != NULL) {
     return 2;
   }
-  if (bt_is_ready()) {
+  if (ble_context.advertising) {
     return 1;
   }
   return 0;
