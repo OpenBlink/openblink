@@ -342,7 +342,11 @@ int ble_init(BLE_CALLBACK cb) {
   }
 
   // Register GATT service after BLE stack is ready
-  ble_blink_init();
+  err = ble_blink_init();
+  if (err) {
+    LOG_ERR("BLE: Blink service registration failed (err %d)", err);
+    return err;
+  }
 
   {
     BLE_PARAM param = {
