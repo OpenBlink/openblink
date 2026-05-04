@@ -126,6 +126,7 @@ Before building OpenBlink, set up the following:
 - **nRF Connect SDK** v3.3.0 — see the [official installation guide](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html)
 - **nRF Connect SDK toolchain** v3.3.0
 - **west** (installed with the nRF Connect SDK)
+- **Ruby** (required for generating mruby/c autogen files)
 
 ### Clone the repository
 
