@@ -422,7 +422,11 @@ int ble_start_advertising(const char *local_name) {
   // Start advertising
   err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd,
                         ARRAY_SIZE(sd));
-  if (err) {
+  if (err == -EALREADY) {
+    LOG_WRN("BLE: Advertising already started");
+    ble_context.advertising = true;
+    return 0;
+  } else if (err) {
     LOG_ERR("BLE: Advertising failed to start (err %d)", err);
     ble_context.advertising = false;
   } else {
