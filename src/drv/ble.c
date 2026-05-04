@@ -38,6 +38,9 @@ BLE_CONTEXT ble_context;
 /** @brief Semaphore for BLE initialization synchronization */
 static K_SEM_DEFINE(ble_init_ok, 0, 1);
 
+/** @brief Work item for restarting advertising from system workqueue */
+static struct k_work adv_work;
+
 /** @brief MTU exchange parameters */
 static struct bt_gatt_exchange_params exchange_params;
 
@@ -220,6 +223,43 @@ static void on_le_data_length_updated(struct bt_conn *conn,
 }
 
 /**
+ * @brief Work handler for restarting advertising
+ *
+ * @details Called from the system workqueue to safely restart advertising
+ * after a connection has been fully recycled
+ *
+ * @param work Work item pointer
+ */
+static void adv_work_handler(struct k_work *work) {
+  int err = ble_start_advertising(bt_get_name());
+  if (err) {
+    LOG_ERR("BLE: Failed to restart advertising (err %d)", err);
+  }
+}
+
+/**
+ * @brief Connection recycled callback
+ *
+ * @details Called when the connection object has been fully recycled
+ * and is available for reuse. This is the safe point to restart advertising.
+ */
+static void on_recycled(void) {
+  LOG_DBG("BLE: Connection object recycled, restarting advertising");
+  k_work_submit(&adv_work);
+}
+
+// Connection callbacks registered at file scope (compile-time initialization)
+BT_CONN_CB_DEFINE(conn_callbacks) = {
+    .connected = on_connected,
+    .disconnected = on_disconnected,
+    .recycled = on_recycled,
+    .le_param_req = on_le_param_req,
+    .le_param_updated = on_le_param_updated,
+    .le_phy_updated = on_le_phy_updated,
+    .le_data_len_updated = on_le_data_length_updated,
+};
+
+/**
  * @brief Bluetooth ready callback
  *
  * @details Called when Bluetooth initialization is complete
@@ -231,16 +271,6 @@ static void bt_ready(int err) {
     LOG_ERR("BLE: init failed with error code %d", err);
     return;
   }
-
-  // https://docs.zephyrproject.org/apidoc/latest/structbt__conn__cb.html
-  BT_CONN_CB_DEFINE(conn_callbacks) = {
-      .connected = on_connected,
-      .disconnected = on_disconnected,
-      .le_param_req = on_le_param_req,
-      .le_param_updated = on_le_param_updated,
-      .le_phy_updated = on_le_phy_updated,
-      .le_data_len_updated = on_le_data_length_updated,
-  };
 
   // Complete the initialization
   k_sem_give(&ble_init_ok);
