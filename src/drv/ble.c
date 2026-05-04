@@ -142,7 +142,12 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason) {
  */
 static bool on_le_param_req(struct bt_conn *conn,
                             struct bt_le_conn_param *param) {
-  // If acceptable params, return true, otherwise return false.
+  // Reject if supervision timeout is too short (< 100ms = 10 * 10ms units)
+  if (param->timeout < 10) {
+    LOG_WRN("BLE: Rejected conn param req: timeout %u too short",
+            param->timeout);
+    return false;
+  }
   return true;
 }
 
