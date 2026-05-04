@@ -329,6 +329,18 @@ int ble_init(BLE_CALLBACK cb) {
   LOG_DBG("BLE: settings_load()");
   settings_load();
 
+  // Clear any stale bonding information from flash.
+  // Currently CONFIG_BT_BONDABLE=n, so no new bonds are created at runtime.
+  // However, residual bond data may exist from previous firmware versions or
+  // configuration changes. Clearing it on every boot ensures a clean state
+  // and avoids occupying the limited pairing slots (CONFIG_BT_MAX_PAIRED=1).
+  // When bonding is enabled in the future, this call should be removed or
+  // replaced with selective cleanup logic.
+  err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+  if (err && err != -ENOENT) {
+    LOG_WRN("BLE: Failed to clear bonding info (err %d)", err);
+  }
+
   // Register GATT service after BLE stack is ready
   ble_blink_init();
 
