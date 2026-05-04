@@ -172,11 +172,11 @@ static void on_le_param_updated(struct bt_conn *conn, uint16_t interval,
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
     LOG_DBG(
-        "BLE: Connection parameters updated!	\n\
-		Connected to: %s						\n\
-		New Connection Interval: %u				\n\
-		New Slave Latency: %u					\n\
-		New Connection Supervisory Timeout: %u	",
+        "BLE: Connection parameters updated!\n\
+        Connected to: %s\n\
+        New Connection Interval: %u\n\
+        New Slave Latency: %u\n\
+        New Connection Supervisory Timeout: %u",
         addr, info.le.interval, info.le.latency, info.le.timeout);
   }
 }
