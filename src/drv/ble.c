@@ -67,7 +67,8 @@ static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
  */
 static void on_connected(struct bt_conn *conn, uint8_t err) {
   if (err) {
-    LOG_ERR("BLE: Connection failed (err %u)", err);
+    LOG_ERR("BLE: Connection failed (err 0x%02x %s)", err,
+            bt_hci_err_to_str(err));
     return;
   }
 
@@ -113,6 +114,9 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
  * @param reason Reason for disconnection
  */
 static void on_disconnected(struct bt_conn *conn, uint8_t reason) {
+  LOG_INF("BLE: Disconnected (reason 0x%02x %s)", reason,
+          bt_hci_err_to_str(reason));
+
   if (ble_context.conn) {
     bt_conn_unref(ble_context.conn);
     ble_context.conn = NULL;
@@ -275,7 +279,8 @@ static void on_security_changed(struct bt_conn *conn, bt_security_t level,
   if (!err) {
     LOG_INF("BLE: Security changed: %s level %u", addr, level);
   } else {
-    LOG_WRN("BLE: Security failed: %s level %u err %d", addr, level, err);
+    LOG_WRN("BLE: Security failed: %s level %u err %d %s", addr, level, err,
+            bt_security_err_to_str(err));
   }
 }
 
