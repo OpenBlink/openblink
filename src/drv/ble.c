@@ -257,11 +257,34 @@ static void on_recycled(void) {
   k_work_submit(&adv_work);
 }
 
+/**
+ * @brief Security level changed callback
+ *
+ * @details Called when the security level of a connection has changed.
+ * Enabled when CONFIG_BT_SMP is active.
+ *
+ * @param conn Bluetooth connection handle
+ * @param level New security level
+ * @param err Security error code (0 for success)
+ */
+static void on_security_changed(struct bt_conn *conn, bt_security_t level,
+                                enum bt_security_err err) {
+  char addr[BT_ADDR_LE_STR_LEN];
+  bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+  if (!err) {
+    LOG_INF("BLE: Security changed: %s level %u", addr, level);
+  } else {
+    LOG_WRN("BLE: Security failed: %s level %u err %d", addr, level, err);
+  }
+}
+
 // Connection callbacks registered at file scope (compile-time initialization)
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = on_connected,
     .disconnected = on_disconnected,
     .recycled = on_recycled,
+    .security_changed = on_security_changed,
     .le_param_req = on_le_param_req,
     .le_param_updated = on_le_param_updated,
     .le_phy_updated = on_le_phy_updated,
