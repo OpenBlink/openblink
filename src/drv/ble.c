@@ -332,16 +332,6 @@ int ble_disconnect() {
 }
 
 /**
- * @brief Advertisement parameters
- * @details Configures advertisement as connectable with 100-150ms interval
- */
-static const struct bt_le_adv_param adv_param = BT_LE_ADV_PARAM_INIT(
-    BT_LE_ADV_OPT_CONN,  // | BT_LE_ADV_OPT_USE_IDENTITY,
-    BT_GAP_ADV_FAST_INT_MIN_2,  // Advertisement interval (100ms)
-    BT_GAP_ADV_FAST_INT_MAX_2,  // Advertisement interval (150ms)
-    NULL);
-
-/**
  * @brief Scan response data
  * @details Includes the OpenBlink service UUID
  */
@@ -370,7 +360,8 @@ int ble_start_advertising(const char *local_name) {
   // 	bt_set_appearance (uint16_t new_appearance)
 
   // Start advertising
-  err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+  err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd,
+                        ARRAY_SIZE(sd));
   if (err) {
     LOG_ERR("BLE: Advertising failed to start (err %d)", err);
   }
