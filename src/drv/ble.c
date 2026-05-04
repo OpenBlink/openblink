@@ -117,7 +117,7 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason) {
   LOG_INF("BLE: Disconnected (reason 0x%02x %s)", reason,
           bt_hci_err_to_str(reason));
 
-  if (ble_context.conn) {
+  if (ble_context.conn == conn) {
     bt_conn_unref(ble_context.conn);
     ble_context.conn = NULL;
   }
@@ -365,13 +365,19 @@ int ble_init(BLE_CALLBACK cb) {
  */
 int ble_disconnect() {
   LOG_INF("BLE: Disconnecting...");
-  int err = 0;
-  if (ble_context.conn != NULL) {
-    err = bt_conn_disconnect(ble_context.conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
-    if (err) {
-      LOG_ERR("BLE: Failed to disconnect (err %d)", err);
-    }
+  struct bt_conn *conn = ble_context.conn;
+  if (conn == NULL) {
+    return 0;
   }
+
+  // Take our own reference to ensure the connection object remains valid
+  // even if on_disconnected fires concurrently and releases ble_context.conn.
+  conn = bt_conn_ref(conn);
+  int err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+  if (err) {
+    LOG_ERR("BLE: Failed to disconnect (err %d)", err);
+  }
+  bt_conn_unref(conn);
   return err;
 }
 
@@ -432,10 +438,16 @@ int ble_stop_advertising() {
  * @return uint16_t Current MTU size in bytes
  */
 uint16_t ble_get_mtu() {
-  if (ble_context.conn == NULL) {
+  struct bt_conn *conn = ble_context.conn;
+  if (conn == NULL) {
     return 23;  // Default ATT MTU
   }
-  return bt_gatt_get_mtu(ble_context.conn);
+
+  // Take our own reference to ensure the connection object remains valid
+  conn = bt_conn_ref(conn);
+  uint16_t mtu = bt_gatt_get_mtu(conn);
+  bt_conn_unref(conn);
+  return mtu;
 }
 
 /**

@@ -343,16 +343,23 @@ static int notify_blink_program(const char *data) {
     return 0;
   }
 
+  // Take our own reference to ensure the connection object remains valid
+  // even if on_disconnected fires concurrently from the BT thread.
+  conn = bt_conn_ref(conn);
+
+  int err = 0;
   const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_PROGRAM];
   if (!bt_gatt_is_subscribed(conn, attr, BT_GATT_CCC_NOTIFY)) {
+    bt_conn_unref(conn);
     return 0;
   }
 
   size_t size = strlen(data);
-  int err = bt_gatt_notify(conn, attr, data, size);
+  err = bt_gatt_notify(conn, attr, data, size);
   if (err) {
-    LOG_ERR("BLE: unable to send notification");
+    LOG_ERR("BLE: unable to send program notification");
   }
+  bt_conn_unref(conn);
   return err;
 }
 
@@ -383,15 +390,22 @@ int ble_print(const char *data) {
     return 0;
   }
 
+  // Take our own reference to ensure the connection object remains valid
+  // even if on_disconnected fires concurrently from the BT thread.
+  conn = bt_conn_ref(conn);
+
+  int err = 0;
   const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_CONSOLE];
   if (!bt_gatt_is_subscribed(conn, attr, BT_GATT_CCC_NOTIFY)) {
+    bt_conn_unref(conn);
     return 0;
   }
 
   size_t size = strlen(data);
-  int err = bt_gatt_notify(conn, attr, data, size);
+  err = bt_gatt_notify(conn, attr, data, size);
   if (err) {
-    LOG_ERR("BLE: unable to send notification");
+    LOG_ERR("BLE: unable to send console notification");
   }
+  bt_conn_unref(conn);
   return err;
 }
