@@ -105,9 +105,6 @@ typedef struct {
 
 // -------------------------------------------------------------------------------------------
 
-/** @brief External reference to BLE context */
-extern BLE_CONTEXT ble_context;
-
 /** @brief Buffer for storing received bytecode */
 static uint8_t blink_bytecode[BLINK_MAX_BYTECODE_SIZE] = {0};
 

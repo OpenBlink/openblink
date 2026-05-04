@@ -86,6 +86,9 @@ typedef struct {
   BLE_CALLBACK event_cb; /**< Event callback function */
 } BLE_CONTEXT;
 
+/** @brief Global BLE context (defined in ble.c) */
+extern BLE_CONTEXT ble_context;
+
 /**
  * @brief Initializes the BLE subsystem
  *
