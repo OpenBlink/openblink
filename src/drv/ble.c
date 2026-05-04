@@ -83,10 +83,10 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
         "BLE: Connection established!\n\
         Connected to: %s\n\
         Role: %u\n\
-        Connection interval: %u\n\
+        Connection interval: %u us\n\
         Slave latency: %u\n\
         Connection supervisory timeout: %u",
-        addr, info.role, info.le.interval, info.le.latency, info.le.timeout);
+        addr, info.role, info.le.interval_us, info.le.latency, info.le.timeout);
   } else {
     LOG_ERR("BLE: Could not parse connection info");
   }
@@ -174,10 +174,10 @@ static void on_le_param_updated(struct bt_conn *conn, uint16_t interval,
     LOG_DBG(
         "BLE: Connection parameters updated!\n\
         Connected to: %s\n\
-        New Connection Interval: %u\n\
+        New Connection Interval: %u us\n\
         New Slave Latency: %u\n\
         New Connection Supervisory Timeout: %u",
-        addr, info.le.interval, info.le.latency, info.le.timeout);
+        addr, info.le.interval_us, info.le.latency, info.le.timeout);
   }
 }
 
