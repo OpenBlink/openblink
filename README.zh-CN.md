@@ -126,6 +126,7 @@ OpenBlink 非常重视**在真实硬件上进行黑客创造的乐趣**。每一
 - **nRF Connect SDK** v3.3.0 — 请参阅 [官方安装指南](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html)
 - **nRF Connect SDK 工具链** v3.3.0
 - **west**（随 nRF Connect SDK 一同安装）
+- **Ruby**（生成 mruby/c autogen 文件所需）
 
 ### 克隆仓库
 
