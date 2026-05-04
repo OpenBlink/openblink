@@ -70,22 +70,16 @@ static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
  * @param err Error code (0 for success)
  */
 static void on_connected(struct bt_conn *conn, uint8_t err) {
-  struct bt_conn_info info;
-
   if (err) {
     LOG_ERR("BLE: Connection failed (err %u)", err);
     return;
-  } else if (bt_conn_get_info(conn, &info)) {
-    LOG_ERR("BLE: Could not parse connection info");
-  } else {
-    ble_context.conn = conn;
+  }
 
-    exchange_params.func = mtu_exchange_cb;
-    int ret = bt_gatt_exchange_mtu(conn, &exchange_params);
-    if (ret) {
-      printk("Failed start MTU exchange (err %d)\n", ret);
-    }
+  ble_context.conn = bt_conn_ref(conn);
 
+  // bt_conn_get_info() is for logging only; failure does not affect connection tracking
+  struct bt_conn_info info;
+  if (bt_conn_get_info(conn, &info) == 0) {
     char addr[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
     LOG_DBG(
@@ -96,12 +90,21 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
         Slave latency: %u\n\
         Connection supervisory timeout: %u",
         addr, info.role, info.le.interval, info.le.latency, info.le.timeout);
-    {
-      BLE_PARAM param = {
-          .event = BLE_EVENT_CONNECTED,
-      };
-      ble_context.event_cb(&param);
-    }
+  } else {
+    LOG_ERR("BLE: Could not parse connection info");
+  }
+
+  exchange_params.func = mtu_exchange_cb;
+  int ret = bt_gatt_exchange_mtu(conn, &exchange_params);
+  if (ret) {
+    printk("Failed start MTU exchange (err %d)\n", ret);
+  }
+
+  {
+    BLE_PARAM param = {
+        .event = BLE_EVENT_CONNECTED,
+    };
+    ble_context.event_cb(&param);
   }
 }
 
@@ -114,6 +117,11 @@ static void on_connected(struct bt_conn *conn, uint8_t err) {
  * @param reason Reason for disconnection
  */
 static void on_disconnected(struct bt_conn *conn, uint8_t reason) {
+  if (ble_context.conn) {
+    bt_conn_unref(ble_context.conn);
+    ble_context.conn = NULL;
+  }
+
   {
     BLE_PARAM param = {
         .event = BLE_EVENT_DISCONNECTED,
@@ -329,7 +337,7 @@ int ble_disconnect() {
   LOG_INF("BLE: Disconnecting...");
   int err = 0;
   if (ble_context.conn != NULL) {
-    bt_conn_disconnect(ble_context.conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+    err = bt_conn_disconnect(ble_context.conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
     if (err) {
       LOG_ERR("BLE: Failed to disconnect (err %d)", err);
     }
