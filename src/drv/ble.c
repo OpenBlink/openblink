@@ -419,7 +419,12 @@ int ble_stop_advertising() {
  *
  * @return uint16_t Current MTU size in bytes
  */
-uint16_t ble_get_mtu() { return bt_gatt_get_mtu(ble_context.conn); }
+uint16_t ble_get_mtu() {
+  if (ble_context.conn == NULL) {
+    return 23;  // Default ATT MTU
+  }
+  return bt_gatt_get_mtu(ble_context.conn);
+}
 
 /**
  * @brief Gets the current BLE state

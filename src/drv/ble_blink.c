@@ -339,16 +339,20 @@ static struct bt_gatt_service service = BT_GATT_SERVICE(attrs);
  * @return int 0 on success, negative on error
  */
 static int notify_blink_program(const char *data) {
-  int err = 0;
+  struct bt_conn *conn = ble_context.conn;
+  if (conn == NULL) {
+    return 0;
+  }
+
   const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_PROGRAM];
+  if (!bt_gatt_is_subscribed(conn, attr, BT_GATT_CCC_NOTIFY)) {
+    return 0;
+  }
 
-  if (bt_gatt_is_subscribed(ble_context.conn, attr, BT_GATT_CCC_NOTIFY)) {
-    size_t size = strlen(data);
-
-    err = bt_gatt_notify(ble_context.conn, attr, data, size);
-    if (err) {
-      LOG_ERR("BLE: unable to send notification");
-    }
+  size_t size = strlen(data);
+  int err = bt_gatt_notify(conn, attr, data, size);
+  if (err) {
+    LOG_ERR("BLE: unable to send notification");
   }
   return err;
 }
@@ -375,17 +379,20 @@ int ble_blink_init() {
  * @return int 0 on success, negative on error
  */
 int ble_print(const char *data) {
-  int err = 0;
-  const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_CONSOLE];
-
-  if (bt_gatt_is_subscribed(ble_context.conn, attr, BT_GATT_CCC_NOTIFY)) {
-    size_t size = strlen(data);
-
-    err = bt_gatt_notify(ble_context.conn, attr, data, size);
-    if (err) {
-      LOG_ERR("BLE: unable to send notification");
-    }
+  struct bt_conn *conn = ble_context.conn;
+  if (conn == NULL) {
+    return 0;
   }
 
+  const struct bt_gatt_attr *attr = &attrs[SERVICE_BLINK_CONSOLE];
+  if (!bt_gatt_is_subscribed(conn, attr, BT_GATT_CCC_NOTIFY)) {
+    return 0;
+  }
+
+  size_t size = strlen(data);
+  int err = bt_gatt_notify(conn, attr, data, size);
+  if (err) {
+    LOG_ERR("BLE: unable to send notification");
+  }
   return err;
 }
