@@ -116,7 +116,11 @@ fn_t comm_init(void) {
   fn_t ret = kSuccess;
   char device_name[BLINK_DEVICE_NAME_SIZE] = {0};
 
-  ble_init(ble_event_cb);
+  int err = ble_init(ble_event_cb);
+  if (err) {
+    LOG_ERR("COMM: BLE initialization failed (err %d)", err);
+    return kFailure;
+  }
 
   // Set Device Name
   blink_get_name(device_name, sizeof(device_name));
@@ -125,7 +129,11 @@ fn_t comm_init(void) {
   // Start Advertising
   const char* name = bt_get_name();
   LOG_DBG("COMM: Start advertising (%s)", name);
-  ble_start_advertising(name);
+  err = ble_start_advertising(name);
+  if (err) {
+    LOG_ERR("COMM: Failed to start advertising (err %d)", err);
+    return kFailure;
+  }
   advertising = true;
 
   return ret;

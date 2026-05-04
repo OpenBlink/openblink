@@ -302,7 +302,8 @@ int ble_init(BLE_CALLBACK cb) {
   // Save callback
   ble_context.event_cb = cb;
 
-  ble_blink_init();
+  // Initialize advertising work item
+  k_work_init(&adv_work, adv_work_handler);
 
   // Enable Bluetooth
   LOG_DBG("BLE: bt_enable()");
@@ -312,11 +313,19 @@ int ble_init(BLE_CALLBACK cb) {
     return err;
   }
 
-  LOG_DBG("settings_load()");
+  // Wait for bt_ready callback to complete
+  err = k_sem_take(&ble_init_ok, K_SECONDS(5));
+  if (err) {
+    LOG_ERR("BLE: initialization timed out");
+    return err;
+  }
+
+  // Load settings after BLE stack is ready
+  LOG_DBG("BLE: settings_load()");
   settings_load();
 
-  // Wait for initialization to complete
-  err = k_sem_take(&ble_init_ok, K_MSEC(100));
+  // Register GATT service after BLE stack is ready
+  ble_blink_init();
 
   {
     BLE_PARAM param = {
