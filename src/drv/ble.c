@@ -336,9 +336,9 @@ int ble_init(BLE_CALLBACK cb) {
   // and avoids occupying the limited pairing slots (CONFIG_BT_MAX_PAIRED=1).
   // When bonding is enabled in the future, this call should be removed or
   // replaced with selective cleanup logic.
-  err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
-  if (err && err != -ENOENT) {
-    LOG_WRN("BLE: Failed to clear bonding info (err %d)", err);
+  int unpair_err = bt_unpair(BT_ID_DEFAULT, BT_ADDR_LE_ANY);
+  if (unpair_err && unpair_err != -ENOENT) {
+    LOG_WRN("BLE: Failed to clear bonding info (err %d)", unpair_err);
   }
 
   // Register GATT service after BLE stack is ready
