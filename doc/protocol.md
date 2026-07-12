@@ -53,7 +53,7 @@ On success the bytecode is persisted to non-volatile storage and the response `O
 
 ### 'L' — Reload
 
-2-byte frame (header only). Restarts the mruby/c VM so the stored bytecode is reloaded. No response is sent.
+2-byte frame (header only). Restarts the mruby/c VM so the stored bytecode is reloaded. While the VM lock is held (`Blink.lock`), the reload request is discarded. No response is sent in either case.
 
 ## CRC16
 

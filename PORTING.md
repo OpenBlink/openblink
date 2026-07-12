@@ -92,7 +92,7 @@ Thread safety: storage functions are called from the VM thread (bytecode load) a
 | `openblink_hal_vm_lock(timeout_ms)` | Acquire a recursive-unfriendly plain mutex within `timeout_ms` ms; return `true` on success. Must support acquisition from both the VM task context (Blink.lock) and the context calling `openblink_vm_restart()`. |
 | `openblink_hal_vm_unlock()` | Release the mutex. |
 | `openblink_hal_define_api()` | Register hardware Ruby classes (LED, Input, ...) with `mrbc_define_class`/`mrbc_define_method`. Called once per VM start. |
-| `openblink_hal_load_default_bytecode(slot, data, capacity, len)` | Provide factory-default bytecode when storage is empty; return `OPENBLINK_STATUS_NOT_FOUND` if there is no default for the slot. |
+| `openblink_hal_load_default_bytecode(slot, data, capacity, len)` | Provide factory-default bytecode when storage is empty or a storage read fails; return `OPENBLINK_STATUS_NOT_FOUND` if there is no default for the slot. |
 
 ### mruby/c HAL
 

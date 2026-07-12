@@ -111,6 +111,19 @@ void openblink_vm_main(void) {
       }
     }
 
+    // Clear the task pointers under the VM lock so a concurrent
+    // openblink_vm_restart() never touches tasks freed by mrbc_cleanup().
+    // If the lock cannot be acquired (e.g. a task ended while holding
+    // Blink.lock), proceed anyway: the same holder also blocks
+    // openblink_vm_restart(), so no restart can race with the cleanup.
+    const bool locked = openblink_hal_vm_lock(OPENBLINK_VM_RESTART_TIMEOUT_MS);
+    for (size_t i = 0; OPENBLINK_SLOT_COUNT > i; i++) {
+      tcb[i] = NULL;
+    }
+    if (locked) {
+      (void)openblink_hal_vm_unlock();
+    }
+
     // mruby/c cleanup
     mrbc_cleanup();
   }
