@@ -2,141 +2,88 @@
 
 ## 概述
 
-本文档描述了 OpenBlink 系统的蓝牙低功耗（BLE）通信规范。包括服务和特性 UUID、协议详情、数据结构和通信流程。
+本文档描述 OpenBlink Blink 协议的低功耗蓝牙 (BLE) 绑定。BLE 是 `protocol.zh-CN.md` 中定义的核心协议的一种传输方式;帧格式、CRC 和响应字符串与传输层无关,均在该文档中规定。本绑定由支持 BLE 的平台集成实现,而不是由 OpenBlink 核心实现。
 
-## 服务和特性
+## 服务与特征
 
 ### OpenBlink 服务
 
-- **服务 UUID**: `227da52c-e13a-412b-befb-ba2256bb7fbe`
-- **描述**: OpenBlink 设备通信的主要服务
+- **Service UUID**: `227da52c-e13a-412b-befb-ba2256bb7fbe`
+- **说明**: OpenBlink 设备通信的主服务
 
-### 特性
+### 特征
 
-| 特性   | UUID                                   | 属性             | 描述                 |
-| ------ | -------------------------------------- | ---------------- | -------------------- |
-| 程序   | `ad9fdd56-1135-4a84-923c-ce5a244385e7` | 写入，无响应写入 | 用于字节码传输和执行 |
-| 控制台 | `a015b3de-185a-4252-aa04-7a87d38ce148` | 通知             | 用于调试输出和通知   |
-| 状态   | `ca141151-3113-448b-b21a-6a6203d253ff` | 读取             | 提供设备状态信息     |
+| 特征    | UUID                                   | 属性                                  | 说明                                                  |
+| ------- | -------------------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| Program | `ad9fdd56-1135-4a84-923c-ce5a244385e7` | Write, Write Without Response, Notify | Blink 协议帧(写入)与协议响应(通知)                |
+| Console | `a015b3de-185a-4252-aa04-7a87d38ce148` | Notify                                | mruby/c 控制台输出(`puts` 等)                       |
+| Status  | `ca141151-3113-448b-b21a-6a6203d253ff` | Read                                  | 设备状态信息(如协商后的 MTU)                        |
 
-## 协议
+## 与核心协议的映射
 
-### Blink 协议
+- 对 Program 特征的每次 GATT 写入恰好承载一个 Blink 协议帧,并原样传递给 `openblink_receive()`。分帧由 GATT 本身提供。
+- 协议响应(`OK slot:<n>` 及 `ERROR: ...` 字符串,见 `protocol.zh-CN.md`)通过平台实现的 `openblink_hal_send_response()`,以 **Program** 特征的通知形式送达主机。
+- Ruby 脚本的控制台输出以 **Console** 特征的通知形式送达。
+- Status 特征完全由平台层处理(例如返回协商后的 GATT MTU,便于主机确定 'D' 数据块大小);核心不参与。
+- 'D' 帧的最大尺寸受协商后 ATT MTU 限制;主机应读取 Status 特征并据此拆分字节码。
 
-- **版本**: 0x01
-- **描述**: 用于在 OpenBlink 设备上传输和执行字节码的协议
+## 帧字节布局
 
-### 命令类型
+权威定义见 `protocol.zh-CN.md`。概要(所有多字节字段均为小端序):
 
-| 命令 | 代码 | 描述             |
-| ---- | ---- | ---------------- |
-| 数据 | 'D'  | 传输字节码块     |
-| 程序 | 'P'  | 执行传输的字节码 |
-| 重置 | 'R'  | 重置设备         |
-| 重载 | 'L'  | 重载字节码       |
+### 公共头(所有帧)
 
-## 数据结构
+| 偏移 | 大小 | 字段    | 说明                          |
+| ---- | ---- | ------- | ----------------------------- |
+| 0    | 1    | version | 协议版本 (0x01)               |
+| 1    | 1    | command | 'D'、'P'、'R' 或 'L'          |
 
-### BLINK_CHUNK_HEADER
+### 'D' 帧(6 字节 + 载荷)
 
-- **大小**: 2 字节
-- **描述**: 所有 Blink 协议命令的通用头部
+| 偏移 | 大小 | 字段   | 说明                          |
+| ---- | ---- | ------ | ----------------------------- |
+| 2    | 2    | offset | 接收缓冲区内的偏移            |
+| 4    | 2    | size   | 载荷字节数                    |
+| 6    | 可变 | data   | 字节码载荷                    |
 
-| 字段    | 类型    | 大小   | 描述                           |
-| ------- | ------- | ------ | ------------------------------ |
-| version | uint8_t | 1 字节 | Blink 协议版本（0x01）         |
-| command | uint8_t | 1 字节 | 命令类型（'D'、'P'、'R'或'L'） |
+### 'P' 帧(8 字节)
 
-### BLINK_CHUNK_DATA
-
-- **大小**: 6 字节 + 数据
-- **描述**: 数据块传输的结构
-
-| 字段   | 类型               | 大小   | 描述                 |
-| ------ | ------------------ | ------ | -------------------- |
-| header | BLINK_CHUNK_HEADER | 2 字节 | 通用头部             |
-| offset | uint16_t           | 2 字节 | 字节码缓冲区中的偏移 |
-| size   | uint16_t           | 2 字节 | 数据块的大小         |
-| data   | uint8_t[]          | 可变   | 实际字节码数据       |
-
-### BLINK_CHUNK_PROGRAM
-
-- **大小**: 8 字节
-- **描述**: 程序执行命令的结构
-
-| 字段     | 类型               | 大小   | 描述           |
-| -------- | ------------------ | ------ | -------------- |
-| header   | BLINK_CHUNK_HEADER | 2 字节 | 通用头部       |
-| length   | uint16_t           | 2 字节 | 字节码总长度   |
-| crc      | uint16_t           | 2 字节 | CRC16 校验和   |
-| slot     | uint8_t            | 1 字节 | 字节码的目标槽 |
-| reserved | uint8_t            | 1 字节 | 保留供将来使用 |
+| 偏移 | 大小 | 字段     | 说明                          |
+| ---- | ---- | -------- | ----------------------------- |
+| 2    | 2    | length   | 字节码总长度                  |
+| 4    | 2    | crc      | CRC16 校验和                  |
+| 6    | 1    | slot     | 目标槽位(从 1 开始)         |
+| 7    | 1    | reserved | 保留供将来使用                |
 
 ## 通信流程
 
-### 字节码传输和执行
+### 字节码传输与执行
 
 ```
-客户端                                      OpenBlink设备
+Client                                      OpenBlink Device
   |                                               |
-  |--- 发现OpenBlink服务 ------------------------>|
-  |<-- 服务和特性发现 ----------------------------|
+  |--- Discover OpenBlink Service --------------->|
+  |<-- Service and Characteristics Found ---------|
+  |--- Subscribe to Program Notifications ------->|
   |                                               |
-  |--- 将数据块1写入程序特性 -------------------->|
-  |--- 将数据块2写入程序特性 -------------------->|
-  |--- 将数据块n写入程序特性 -------------------->|
+  |--- Write Data Chunk 1 to Program Char ------->|
+  |--- Write Data Chunk 2 to Program Char ------->|
+  |--- Write Data Chunk n to Program Char ------->|
   |                                               |
-  |--- 将程序命令写入程序特性 ------------------->|
-  |                   (CRC检查)                   |
+  |--- Write Program Command to Program Char ---->|
+  |                   (CRC check)                 |
+  |<-- Notify "OK slot:<n>" on Program Char ------|
   |                                               |
-  |--- 写入重置/重载命令 ------------------------>|
+  |--- Write Reset ('R') or Reload ('L') -------->|
   |                                               |
 ```
-
-### BLE 事件
-
-| 事件                   | 描述                |
-| ---------------------- | ------------------- |
-| BLE_EVENT_INITIALIZED  | BLE 堆栈已初始化    |
-| BLE_EVENT_CONNECTED    | BLE 连接已建立      |
-| BLE_EVENT_DISCONNECTED | BLE 连接已终止      |
-| BLE_EVENT_RECEIVED     | 通过 BLE 接收数据   |
-| BLE_EVENT_SENT         | 通过 BLE 发送数据   |
-| BLE_EVENT_BLINK        | 接收到 Blink 字节码 |
-| BLE_EVENT_STATUS       | 请求状态信息        |
-| BLE_EVENT_REBOOT       | 接收到重启请求      |
-| BLE_EVENT_RELOAD       | 接收到重载请求      |
 
 ## 错误处理
 
-### 错误通知
+协议错误以 Program 特征的通知形式报告。响应字符串的完整列表在 `protocol.zh-CN.md` 中定义。
 
-字节码传输或执行期间的错误通过控制台特性的通知报告。通知包含错误消息字符串。
+## 实现说明
 
-### 常见错误
-
-| 错误                                | 描述                         |
-| ----------------------------------- | ---------------------------- |
-| "ERROR: Blink version mismatch"     | 不支持协议版本               |
-| "ERROR: Blink data size error"      | 数据块大小与预期大小不匹配   |
-| "ERROR: Size exceeds buffer limits" | 字节码大小超过允许的最大大小 |
-| "ERROR: CRC mismatch"               | CRC 校验和验证失败           |
-| "ERROR: Blink program error"        | 字节码执行期间出错           |
-| "ERROR: Blink unknown type"         | 接收到未知命令类型           |
-
-## 实现注意事项
-
-### 最大字节码大小
-
-最大字节码大小在实现中由`BLINK_MAX_BYTECODE_SIZE`定义。
-
-### CRC 计算
-
-CRC16 校验和使用`crc16_reflect`函数计算，参数如下：
-
-- 初始值：0xFFFF
-- 多项式：0xd175（为数据长度高达 32751 位提供汉明距离 4 保护）
-- 输入：字节码缓冲区
-- 长度：字节码长度
-
-参考文献: https://users.ece.cmu.edu/~koopman/crc/index.html
+- 最大字节码大小默认为 4016 字节(`OPENBLINK_MAX_BYTECODE_SIZE`)。
+- CRC16 参数(反射多项式 0xD175,初始值 0xFFFF)在 `protocol.zh-CN.md` 中定义。
+- 上述 UUID 必须保持稳定,以保证现有客户端(WebIDE、VS Code 扩展)的兼容性。

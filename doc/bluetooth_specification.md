@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the Bluetooth Low Energy (BLE) communication specification for the OpenBlink system. It includes service and characteristic UUIDs, protocol details, data structures, and communication flow.
+This document describes the Bluetooth Low Energy (BLE) binding of the OpenBlink Blink protocol. BLE is one possible transport for the core protocol defined in `protocol.md`; the frame formats, CRC, and response strings are transport-independent and specified there. This binding is implemented by BLE-capable platform integrations, not by the OpenBlink core itself.
 
 ## Service and Characteristics
 
@@ -13,64 +13,47 @@ This document describes the Bluetooth Low Energy (BLE) communication specificati
 
 ### Characteristics
 
-| Characteristic | UUID                                   | Properties                    | Description                              |
-| -------------- | -------------------------------------- | ----------------------------- | ---------------------------------------- |
-| Program        | `ad9fdd56-1135-4a84-923c-ce5a244385e7` | Write, Write Without Response | Used for bytecode transfer and execution |
-| Console        | `a015b3de-185a-4252-aa04-7a87d38ce148` | Notify                        | Used for debug output and notifications  |
-| Status         | `ca141151-3113-448b-b21a-6a6203d253ff` | Read                          | Provides device status information       |
+| Characteristic | UUID                                   | Properties                            | Description                                                    |
+| -------------- | -------------------------------------- | ------------------------------------- | -------------------------------------------------------------- |
+| Program        | `ad9fdd56-1135-4a84-923c-ce5a244385e7` | Write, Write Without Response, Notify | Blink protocol frames (write) and protocol responses (notify)  |
+| Console        | `a015b3de-185a-4252-aa04-7a87d38ce148` | Notify                                | mruby/c console output (`puts`, etc.)                          |
+| Status         | `ca141151-3113-448b-b21a-6a6203d253ff` | Read                                  | Device status information (e.g. negotiated MTU)                |
 
-## Protocol
+## Mapping to the Core Protocol
 
-### Blink Protocol
+- Each GATT write to the Program characteristic carries exactly one Blink protocol frame and is passed to `openblink_receive()` unmodified. Framing is therefore provided by GATT itself.
+- Protocol responses (`OK slot:<n>` and `ERROR: ...` strings, see `protocol.md`) are delivered to the host as notifications on the **Program** characteristic via the platform's `openblink_hal_send_response()` implementation.
+- Console output from Ruby scripts is delivered as notifications on the **Console** characteristic.
+- The Status characteristic is handled entirely by the platform layer (e.g. returning the negotiated GATT MTU so the host can size its 'D' chunks); the core is not involved.
+- The maximum 'D' frame size is bounded by the negotiated ATT MTU; hosts should query the Status characteristic and split bytecode into chunks accordingly.
 
-- **Version**: 0x01
-- **Description**: Protocol for transferring and executing bytecode on the OpenBlink device
+## Frame Byte Layouts
 
-### Command Types
+See `protocol.md` for the authoritative definition. Summary (all multi-byte fields little-endian):
 
-| Command | Code | Description                       |
-| ------- | ---- | --------------------------------- |
-| Data    | 'D'  | Transfers a chunk of bytecode     |
-| Program | 'P'  | Executes the transferred bytecode |
-| Reset   | 'R'  | Resets the device                 |
-| Reload  | 'L'  | Reloads the bytecode              |
+### Common header (all frames)
 
-## Data Structures
+| Offset | Size | Field   | Description                   |
+| ------ | ---- | ------- | ----------------------------- |
+| 0      | 1    | version | Protocol version (0x01)       |
+| 1      | 1    | command | 'D', 'P', 'R', or 'L'         |
 
-### BLINK_CHUNK_HEADER
+### 'D' frame (6 bytes + payload)
 
-- **Size**: 2 bytes
-- **Description**: Common header for all Blink protocol commands
+| Offset | Size     | Field  | Description                   |
+| ------ | -------- | ------ | ----------------------------- |
+| 2      | 2        | offset | Offset in the receive buffer  |
+| 4      | 2        | size   | Payload size in bytes         |
+| 6      | variable | data   | Bytecode payload              |
 
-| Field   | Type    | Size   | Description                          |
-| ------- | ------- | ------ | ------------------------------------ |
-| version | uint8_t | 1 byte | Blink protocol version (0x01)        |
-| command | uint8_t | 1 byte | Command type ('D', 'P', 'R', or 'L') |
+### 'P' frame (8 bytes)
 
-### BLINK_CHUNK_DATA
-
-- **Size**: 6 bytes + data
-- **Description**: Structure for data chunk transfers
-
-| Field  | Type               | Size     | Description               |
-| ------ | ------------------ | -------- | ------------------------- |
-| header | BLINK_CHUNK_HEADER | 2 bytes  | Common header             |
-| offset | uint16_t           | 2 bytes  | Offset in bytecode buffer |
-| size   | uint16_t           | 2 bytes  | Size of data chunk        |
-| data   | uint8_t[]          | Variable | Actual bytecode data      |
-
-### BLINK_CHUNK_PROGRAM
-
-- **Size**: 8 bytes
-- **Description**: Structure for program execution command
-
-| Field    | Type               | Size    | Description              |
-| -------- | ------------------ | ------- | ------------------------ |
-| header   | BLINK_CHUNK_HEADER | 2 bytes | Common header            |
-| length   | uint16_t           | 2 bytes | Total bytecode length    |
-| crc      | uint16_t           | 2 bytes | CRC16 checksum           |
-| slot     | uint8_t            | 1 byte  | Target slot for bytecode |
-| reserved | uint8_t            | 1 byte  | Reserved for future use  |
+| Offset | Size | Field    | Description                   |
+| ------ | ---- | -------- | ----------------------------- |
+| 2      | 2    | length   | Total bytecode length         |
+| 4      | 2    | crc      | CRC16 checksum                |
+| 6      | 1    | slot     | Target slot (1-origin)        |
+| 7      | 1    | reserved | Reserved for future use       |
 
 ## Communication Flow
 
@@ -81,6 +64,7 @@ Client                                      OpenBlink Device
   |                                               |
   |--- Discover OpenBlink Service --------------->|
   |<-- Service and Characteristics Found ---------|
+  |--- Subscribe to Program Notifications ------->|
   |                                               |
   |--- Write Data Chunk 1 to Program Char ------->|
   |--- Write Data Chunk 2 to Program Char ------->|
@@ -88,55 +72,18 @@ Client                                      OpenBlink Device
   |                                               |
   |--- Write Program Command to Program Char ---->|
   |                   (CRC check)                 |
+  |<-- Notify "OK slot:<n>" on Program Char ------|
   |                                               |
-  |--- Write Reset/Reload Command --------------->|
+  |--- Write Reset ('R') or Reload ('L') -------->|
   |                                               |
 ```
 
-### BLE Events
-
-| Event                  | Description                    |
-| ---------------------- | ------------------------------ |
-| BLE_EVENT_INITIALIZED  | BLE stack has been initialized |
-| BLE_EVENT_CONNECTED    | BLE connection established     |
-| BLE_EVENT_DISCONNECTED | BLE connection terminated      |
-| BLE_EVENT_RECEIVED     | Data received over BLE         |
-| BLE_EVENT_SENT         | Data sent over BLE             |
-| BLE_EVENT_BLINK        | Blink bytecode received        |
-| BLE_EVENT_STATUS       | Status information requested   |
-| BLE_EVENT_REBOOT       | Reboot request received        |
-| BLE_EVENT_RELOAD       | Reload request received        |
-
 ## Error Handling
 
-### Error Notifications
-
-Errors during bytecode transfer or execution are reported through notifications on the Console characteristic. The notification contains an error message string.
-
-### Common Errors
-
-| Error                               | Description                                  |
-| ----------------------------------- | -------------------------------------------- |
-| "ERROR: Blink version mismatch"     | Protocol version is not supported            |
-| "ERROR: Blink data size error"      | Data chunk size does not match expected size |
-| "ERROR: Size exceeds buffer limits" | Bytecode size exceeds maximum allowed size   |
-| "ERROR: CRC mismatch"               | CRC checksum verification failed             |
-| "ERROR: Blink program error"        | Error during bytecode execution              |
-| "ERROR: Blink unknown type"         | Unknown command type received                |
+Protocol errors are reported as notifications on the Program characteristic. The full list of response strings is defined in `protocol.md`.
 
 ## Implementation Notes
 
-### Maximum Bytecode Size
-
-The maximum bytecode size is defined by `BLINK_MAX_BYTECODE_SIZE` in the implementation.
-
-### CRC Calculation
-
-CRC16 checksum is calculated using the `crc16_reflect` function with the following parameters:
-
-- Initial value: 0xFFFF
-- Polynomial: 0xd175 (provides Hamming Distance 4 protection for data lengths up to 32751 bits)
-- Input: bytecode buffer
-- Length: bytecode length
-
-Reference: https://users.ece.cmu.edu/~koopman/crc/index.html
+- The maximum bytecode size defaults to 4016 bytes (`OPENBLINK_MAX_BYTECODE_SIZE`).
+- CRC16 parameters (reflected polynomial 0xD175, seed 0xFFFF) are defined in `protocol.md`.
+- The UUIDs above must be kept stable so existing clients (WebIDE, VS Code extension) remain compatible.

@@ -1,115 +1,18 @@
 # mruby API Specification
 
----
+This document describes the Ruby API available to OpenBlink scripts.
 
-## Input Class
+The OpenBlink core provides only the `Blink` class. Hardware classes such as `LED`, `Input`, and `BLE` are defined by each platform integration (via `openblink_hal_define_api()`); consult your platform repository for their specifications.
 
-### pressed? Method
-
-#### Arguments
-
-| Name  | Values                 | Optional | Type            | Notes |
-| ----- | ---------------------- | -------- | --------------- | ----- |
-| part: | :sw1, :sw2, :sw3, :sw4 | No       | Keyword(Symbol) |       |
-
-#### Return Value (bool)
-
-- true: Button is pressed
-- false: Condition not met
-
-#### Code Example
-
-```ruby
-Input.pressed?(part: :sw1)
-```
-
-### released? Method
-
-#### Arguments
-
-| Name  | Values                 | Optional | Type            | Notes |
-| ----- | ---------------------- | -------- | --------------- | ----- |
-| part: | :sw1, :sw2, :sw3, :sw4 | No       | Keyword(Symbol) |       |
-
-#### Return Value (bool)
-
-- true: Button is released
-- false: Condition not met
-
-#### Code Example
-
-```ruby
-Input.released?(part: :sw1)
-```
-
----
-
-## LED Class
-
-### set Method
-
-#### Arguments
-
-| Name   | Values (**bold**: default) | Optional | Type            | Notes                          |
-| ------ | -------------------------- | -------- | --------------- | ------------------------------ |
-| part:  | :led1, :led2, :led3        | No       | Keyword(Symbol) | :led3 is for system tasks only |
-| state: | true, **false**            | Yes      | Keyword(bool)   |                                |
-
-#### Return Value (bool)
-
-- true: Success
-- false: Failure
-
-#### Code Example
-
-```ruby
-LED.set(part: :led1, state: true)
-```
-
----
-
-## BLE Class
-
-### state Method
-
-#### Arguments
-
-None
-
-#### Return Value (int)
-
-- 0: BLE Off state
-- 1: BLE Advertising state
-- 2: BLE Connected state
-
-#### Code Example
-
-```ruby
-case BLE.state()
-  when 0
-    # Off
-  when 1
-    # Advertising
-  when 2
-    # Connected
-end
-```
+In addition, the built-in classes of mruby/c 4.0.0 are available, including `Task`, `Mutex`, and `VM` for multitasking control.
 
 ---
 
 ## Blink Class
 
-### req_reload? Method (Deprecated)
-
-#### Arguments
-
-None
-
-#### Return Value (bool)
-
-- false (This method has been deprecated, but returns false for compatibility.)
-
 ### lock Method & unlock Method
+
+While the lock is held, bytecode reloads ('L' command) are rejected, protecting critical sections from being interrupted.
 
 #### Arguments
 
@@ -128,3 +31,5 @@ if Blink.lock
   Blink.unlock
 end
 ```
+
+Note: the deprecated `Blink.req_reload?` method has been removed in core v0.4.0. Scripts using it always received `false`; remove the call or restructure the loop.
