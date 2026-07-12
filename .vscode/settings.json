@@ -1,6 +1,5 @@
 {
     "C_Cpp.clang_format_style": "Google",
     "editor.formatOnSave": true,
-    "editor.formatOnType": true,
-    "nrf-connect.flash.softreset": true
+    "editor.formatOnType": true
 }

@@ -4,81 +4,178 @@
  */
 /**
  * @file blink.h
- * @brief Blink bytecode management
- * @details Manages bytecode slots for the mruby/c virtual machine
+ * @brief Blink protocol receive entry point and bytecode slot management
+ * @details Declares the transport-independent receive entry point, the slot
+ * API backed by non-volatile storage, and the HAL functions that a platform
+ * must implement to support them.
  */
-#ifndef APP_BLINK_H
-#define APP_BLINK_H
+#ifndef OPENBLINK_BLINK_H
+#define OPENBLINK_BLINK_H
 
 #include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <sys/types.h>
+
+#include "config.h"
+#include "types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** @brief First bytecode slot */
+#define OPENBLINK_SLOT_1 ((openblink_slot_t)1U)
+/** @brief Second bytecode slot */
+#define OPENBLINK_SLOT_2 ((openblink_slot_t)2U)
+
+/* ---- Core API ----------------------------------------------------------- */
 
 /**
- * @brief Maximum size of bytecode that can be stored
- */
-#define BLINK_MAX_BYTECODE_SIZE (4016)
-
-/**
- * @brief Size of the device name buffer including BT device name, separator,
- * and ID
- */
-#define BLINK_DEVICE_NAME_SIZE (sizeof(CONFIG_BT_DEVICE_NAME) + 1 + 4 + 1)
-
-/**
- * @typedef blink_slot_t
- * @brief Enumeration of bytecode storage slots
- */
-typedef enum {
-  kBlinkSlot1 = 1U, /**< First bytecode slot */
-  kBlinkSlot2 = 2U, /**< Second bytecode slot */
-} blink_slot_t;
-
-/**
- * @brief Gets the device name with unique identifier
+ * @brief Processes one received Blink protocol frame
  *
- * @param name Buffer to store the device name
- * @param kBufSize Size of the buffer
+ * @details Parses a single frame ('D', 'P', 'R' or 'L') and performs the
+ * corresponding action. Responses are emitted through
+ * openblink_hal_send_response(). One frame must be delivered per call;
+ * framing is the responsibility of the transport. This function is not
+ * re-entrant and must be called serially from a single context.
+ *
+ * @param data Pointer to the frame bytes
+ * @param len Length of the frame in bytes
+ * @return openblink_status_t OPENBLINK_STATUS_OK if the frame was processed
+ * successfully
  */
-void blink_get_name(char *const name, const size_t kBufSize);
+openblink_status_t openblink_receive(const void* data, openblink_length_t len);
+
+/**
+ * @brief Stores bytecode into the specified slot
+ *
+ * @param slot Target slot (1..OPENBLINK_SLOT_COUNT)
+ * @param data Pointer to the bytecode
+ * @param len Length of the bytecode in bytes
+ * @param written_len Optional output for the number of bytes written (may be
+ * NULL)
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success
+ */
+openblink_status_t openblink_slot_store(openblink_slot_t slot, const void* data,
+                                        openblink_length_t len,
+                                        openblink_length_t* written_len);
 
 /**
  * @brief Loads bytecode from the specified slot
  *
- * @param kSlot The slot to load from
- * @param data Buffer to store the bytecode
- * @param kLength Maximum length of the buffer
- * @return ssize_t The number of bytes read, or negative on error
+ * @param slot Source slot (1..OPENBLINK_SLOT_COUNT)
+ * @param data Buffer for the bytecode
+ * @param capacity Capacity of the buffer in bytes
+ * @param read_len Optional output for the number of bytes read (may be NULL)
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success,
+ * OPENBLINK_STATUS_NOT_FOUND if the slot is empty
  */
-ssize_t blink_load(const blink_slot_t kSlot, void *const data,
-                   const size_t kLength);
+openblink_status_t openblink_slot_load(openblink_slot_t slot, void* data,
+                                       size_t capacity,
+                                       openblink_length_t* read_len);
 
 /**
- * @brief Stores bytecode to the specified slot
+ * @brief Gets the length of the bytecode stored in the specified slot
  *
- * @param kSlot The slot to store to
- * @param kData Pointer to the bytecode data
- * @param kLength Length of the bytecode data
- * @return ssize_t The number of bytes written, or negative on error
+ * @param slot Slot to query (1..OPENBLINK_SLOT_COUNT)
+ * @param len Output for the stored length in bytes
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success,
+ * OPENBLINK_STATUS_NOT_FOUND if the slot is empty
  */
-ssize_t blink_store(const blink_slot_t kSlot, const void *const kData,
-                    const size_t kLength);
+openblink_status_t openblink_slot_get_data_length(openblink_slot_t slot,
+                                                  openblink_length_t* len);
 
 /**
- * @brief Gets the length of bytecode in the specified slot
+ * @brief Deletes the bytecode stored in the specified slot
  *
- * @param kSlot The slot to check
- * @return ssize_t The length of the bytecode, or negative on error
+ * @param slot Slot to delete (1..OPENBLINK_SLOT_COUNT)
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success
  */
-ssize_t blink_get_data_length(const blink_slot_t kSlot);
+openblink_status_t openblink_slot_delete(openblink_slot_t slot);
+
+/* ---- HAL (implemented by the platform) ---------------------------------- */
 
 /**
- * @brief Deletes bytecode from the specified slot
+ * @brief Initializes the non-volatile storage backend
  *
- * @param kSlot The slot to delete
- * @return int 0 on success, negative on error
+ * @details Must be called by the platform before any other storage HAL
+ * function is used. The storage HAL functions must be thread-safe.
+ *
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success
  */
-int blink_delete(const blink_slot_t kSlot);
+openblink_status_t openblink_hal_storage_init(void);
 
+/**
+ * @brief Reads bytecode for a slot from non-volatile storage
+ *
+ * @param slot Source slot (1..OPENBLINK_SLOT_COUNT)
+ * @param data Buffer for the bytecode
+ * @param capacity Capacity of the buffer in bytes
+ * @param read_len Output for the number of bytes read
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success,
+ * OPENBLINK_STATUS_NOT_FOUND if the slot is empty
+ */
+openblink_status_t openblink_hal_storage_read(openblink_slot_t slot, void* data,
+                                              size_t capacity,
+                                              openblink_length_t* read_len);
+
+/**
+ * @brief Writes bytecode for a slot to non-volatile storage
+ *
+ * @param slot Target slot (1..OPENBLINK_SLOT_COUNT)
+ * @param data Pointer to the bytecode
+ * @param len Length of the bytecode in bytes
+ * @param written_len Output for the number of bytes written
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success
+ */
+openblink_status_t openblink_hal_storage_write(openblink_slot_t slot,
+                                               const void* data,
+                                               openblink_length_t len,
+                                               openblink_length_t* written_len);
+
+/**
+ * @brief Gets the stored bytecode length for a slot
+ *
+ * @param slot Slot to query (1..OPENBLINK_SLOT_COUNT)
+ * @param len Output for the stored length in bytes
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success,
+ * OPENBLINK_STATUS_NOT_FOUND if the slot is empty
+ */
+openblink_status_t openblink_hal_storage_get_length(openblink_slot_t slot,
+                                                    openblink_length_t* len);
+
+/**
+ * @brief Deletes the stored bytecode for a slot
+ *
+ * @param slot Slot to delete (1..OPENBLINK_SLOT_COUNT)
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success
+ */
+openblink_status_t openblink_hal_storage_delete(openblink_slot_t slot);
+
+/**
+ * @brief Sends a Blink protocol response to the connected host
+ *
+ * @details Called by the core to deliver "OK slot:<n>" and error responses.
+ * When no host is connected or subscribed, the platform may drop the data and
+ * return OPENBLINK_STATUS_OK.
+ *
+ * @param data Pointer to the response payload
+ * @param len Length of the response payload in bytes
+ * @return openblink_status_t OPENBLINK_STATUS_OK on success
+ */
+openblink_status_t openblink_hal_send_response(const void* data,
+                                               openblink_length_t len);
+
+/**
+ * @brief Reboots the device
+ *
+ * @details Invoked when an 'R' command is received. This function is not
+ * expected to return on success.
+ *
+ * @return openblink_status_t OPENBLINK_STATUS_ERROR if the reboot failed
+ */
+openblink_status_t openblink_hal_reboot(void);
+
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* OPENBLINK_BLINK_H */
