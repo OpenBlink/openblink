@@ -19,8 +19,6 @@
 - [OpenBlink 生态系统](#openblink-生态系统)
 - [理念与目标](#理念与目标)
 - [快速开始](#快速开始)
-- [已验证的硬件](#已验证的硬件)
-- [开发环境版本](#开发环境版本)
 - [文档](#文档)
 - [贡献](#贡献)
 - [许可证](#许可证)
@@ -30,7 +28,7 @@
 
 OpenBlink 由多个协同工作的代码仓库组成：
 
-- **[openblink](https://github.com/OpenBlink/openblink)** — 核心固件（本仓库）
+- **[openblink](https://github.com/OpenBlink/openblink)** — 与平台无关的核心库（本仓库）：提供 Blink 协议、槽位管理和 mruby/c 虚拟机生命周期，由各平台固件仓库作为 git 子模块使用
 - **[openblink-vscode-extension](https://github.com/OpenBlink/openblink-vscode-extension)** — 用于 Ruby 代码编辑和通过 BLE 进行无线 Blink 的 VSCode 扩展
 - **[openblink-webide](https://github.com/OpenBlink/openblink-webide)** — 基于浏览器的 Web IDE
 
@@ -119,65 +117,31 @@ OpenBlink 非常重视**在真实硬件上进行黑客创造的乐趣**。每一
 
 ## 快速开始
 
-### 前置条件
+本仓库是**与平台无关的 OpenBlink 核心**：一个包含 Blink 协议解析器、字节码槽位管理和 mruby/c 虚拟机生命周期的 C11 库。它本身不能构建出完整的固件。
 
-在构建 OpenBlink 之前，请准备以下开发环境：
+**要在设备上运行 OpenBlink**，请使用（或创建）将本核心与特定开发板的传输、存储和硬件 API 集成在一起的平台仓库。构建和烧录说明位于各平台仓库中。
 
-- **nRF Connect SDK** v3.3.0 — 请参阅 [官方安装指南](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html)
-- **nRF Connect SDK 工具链** v3.3.0
-- **west**（随 nRF Connect SDK 一同安装）
-- **Ruby**（生成 mruby/c autogen 文件所需）
-
-### 克隆仓库
+**要将 OpenBlink 移植到新平台**，请将本仓库作为 git 子模块添加，并实现 [PORTING.md](./PORTING.md) 中描述的 HAL 函数：
 
 ```console
-$ git clone https://github.com/OpenBlink/openblink.git
-$ cd openblink
+$ git submodule add https://github.com/OpenBlink/openblink.git
 $ git submodule update --init --recursive
 ```
 
-### 构建
-
-请根据你的硬件选择板目标：
-
-```console
-# nRF54L15-DK
-$ west build -b nrf54l15dk/nrf54l15/cpuapp --sysbuild
-
-# nRF52840-DK
-$ west build -b nrf52840dk/nrf52840 --sysbuild
-```
-
-### 烧录
-
-```console
-$ west flash
-```
-
-烧录完成后，设备会以 `OpenBlink` 为名开始 BLE 广播。通过 [VSCode 扩展](https://github.com/OpenBlink/openblink-vscode-extension) 或 [Web IDE](https://github.com/OpenBlink/openblink-webide) 连接即可开始 Blink。
-
-## 已验证的硬件
-
-以下硬件平台已通过 OpenBlink 测试：
-
-- Nordic nRF54L15-DK (Board target: `nrf54l15dk/nrf54l15/cpuapp`)
-- Nordic nRF52840-DK (Board target: `nrf52840dk/nrf52840`)
-
-## 开发环境版本
-
-- nRF Connect SDK toolchain v3.3.0
-- nRF Connect SDK v3.3.0
+运行 OpenBlink 固件的设备可以通过 [VSCode 扩展](https://github.com/OpenBlink/openblink-vscode-extension) 或 [Web IDE](https://github.com/OpenBlink/openblink-webide) 进行无线编程。
 
 ## 文档
 
-- **[mruby API 规范](./doc/mruby_api.zh-CN.md)** — OpenBlink 设备上可用的 Ruby 类和方法
-- **[Bluetooth 通信规范](./doc/bluetooth_specification.zh-CN.md)** — BLE 服务、特征和 Blink 协议的详细信息
+- **[移植指南](./PORTING.md)** — 如何将核心集成到新平台（英文）
+- **[Blink 协议规范](./doc/protocol.zh-CN.md)** — 与传输层无关的线路协议
+- **[mruby API 规范](./doc/mruby_api.zh-CN.md)** — 核心提供的 Ruby 类和方法
+- **[Bluetooth 通信规范](./doc/bluetooth_specification.zh-CN.md)** — Blink 协议的 BLE 绑定
 - **[DeepWiki](https://deepwiki.com/OpenBlink/openblink)** — 由 AI 驱动的代码库综合文档
 - **[doc/](./doc)** — 完整的文档目录（包含各语言翻译版本）
 
 ## 贡献
 
-欢迎贡献！请随时通过 GitHub 提交 [Issues](https://github.com/OpenBlink/openblink/issues) 或 [Pull Requests](https://github.com/OpenBlink/openblink/pulls)。提交 bug 时，请附上板目标、SDK 版本和复现步骤。
+欢迎贡献！请随时通过 GitHub 提交 [Issues](https://github.com/OpenBlink/openblink/issues) 或 [Pull Requests](https://github.com/OpenBlink/openblink/pulls)。提交 bug 时，请附上平台、工具链版本和复现步骤。
 
 ## 许可证
 
@@ -187,4 +151,3 @@ OpenBlink 采用 **BSD 3-Clause License** 发布。完整文本请参阅 [LICENS
 
 - **ViXion Blink** — OpenBlink 从 ViXion Blink 分叉而来
 - **[mruby/c](https://github.com/mrubyc/mrubyc)** — 面向微控制器的轻量级 Ruby VM
-- **[Zephyr RTOS](https://www.zephyrproject.org/)** 和 **[nRF Connect SDK](https://www.nordicsemi.com/Products/Development-software/nrf-connect-sdk)** — 基础 RTOS 和 SDK

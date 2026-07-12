@@ -19,8 +19,6 @@
 - [OpenBlink エコシステム](#openblink-エコシステム)
 - [思想とゴール](#思想とゴール)
 - [はじめに](#はじめに)
-- [検証済みハードウェア](#検証済みハードウェア)
-- [開発環境バージョン](#開発環境バージョン)
 - [ドキュメント](#ドキュメント)
 - [コントリビューション](#コントリビューション)
 - [ライセンス](#ライセンス)
@@ -30,7 +28,7 @@
 
 OpenBlink は連携する複数のリポジトリで構成されています：
 
-- **[openblink](https://github.com/OpenBlink/openblink)** — コアファームウェア（本リポジトリ）
+- **[openblink](https://github.com/OpenBlink/openblink)** — プラットフォーム非依存のコアライブラリ（本リポジトリ）。Blink プロトコル、スロット管理、mruby/c VM ライフサイクルを提供し、各プラットフォームのファームウェアリポジトリから git submodule として利用されます
 - **[openblink-vscode-extension](https://github.com/OpenBlink/openblink-vscode-extension)** — Ruby コード編集と BLE 経由のワイヤレス Blink を行う VSCode 拡張機能
 - **[openblink-webide](https://github.com/OpenBlink/openblink-webide)** — ブラウザベースの Web IDE
 
@@ -119,65 +117,31 @@ OpenBlink は**実機でハッキングする喜び**を大切にしています
 
 ## はじめに
 
-### 前提条件
+本リポジトリは**プラットフォーム非依存の OpenBlink core** です。Blink プロトコルパーサ、バイトコードスロット管理、mruby/c VM ライフサイクルを含む C11 ライブラリであり、単体で完全なファームウェアをビルドするものではありません。
 
-OpenBlink をビルドする前に、以下の開発環境をセットアップしてください：
+**デバイスで OpenBlink を動作させるには**、本 core を特定のボードの transport・ストレージ・ハードウェア API と統合するプラットフォームリポジトリを利用（または作成）してください。ビルド・書き込み手順は各プラットフォームリポジトリにあります。
 
-- **nRF Connect SDK** v3.3.0 — [公式インストールガイド](https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/installation/install_ncs.html) を参照
-- **nRF Connect SDK ツールチェーン** v3.3.0
-- **west**（nRF Connect SDK と一緒にインストールされます）
-- **Ruby**（mruby/cのautogenファイル生成に必要）
-
-### リポジトリのクローン
+**新しいプラットフォームへの移植は**、本リポジトリを git submodule として追加し、[PORTING.md](./PORTING.md) に記載の HAL 関数を実装してください：
 
 ```console
-$ git clone https://github.com/OpenBlink/openblink.git
-$ cd openblink
+$ git submodule add https://github.com/OpenBlink/openblink.git
 $ git submodule update --init --recursive
 ```
 
-### ビルド
-
-お使いのハードウェアに合わせてボードターゲットを選択してください：
-
-```console
-# nRF54L15-DK
-$ west build -b nrf54l15dk/nrf54l15/cpuapp --sysbuild
-
-# nRF52840-DK
-$ west build -b nrf52840dk/nrf52840 --sysbuild
-```
-
-### 書き込み
-
-```console
-$ west flash
-```
-
-書き込みが完了すると、デバイスは `OpenBlink` という名前で BLE アドバタイズを開始します。[VSCode 拡張機能](https://github.com/OpenBlink/openblink-vscode-extension) または [Web IDE](https://github.com/OpenBlink/openblink-webide) から接続して Blink を始めましょう。
-
-## 検証済みハードウェア
-
-以下のハードウェアプラットフォームが OpenBlink でテスト済みです：
-
-- Nordic nRF54L15-DK (Board target: `nrf54l15dk/nrf54l15/cpuapp`)
-- Nordic nRF52840-DK (Board target: `nrf52840dk/nrf52840`)
-
-## 開発環境バージョン
-
-- nRF Connect SDK toolchain v3.3.0
-- nRF Connect SDK v3.3.0
+OpenBlink ファームウェアが動作するデバイスは、[VSCode 拡張機能](https://github.com/OpenBlink/openblink-vscode-extension) または [Web IDE](https://github.com/OpenBlink/openblink-webide) からワイヤレスにプログラミングできます。
 
 ## ドキュメント
 
-- **[mruby API 仕様](./doc/mruby_api.ja.md)** — OpenBlink デバイス上で利用可能な Ruby クラスとメソッド
-- **[Bluetooth 通信仕様](./doc/bluetooth_specification.ja.md)** — BLE サービス、キャラクタリスティック、Blink プロトコルの詳細
+- **[移植ガイド](./PORTING.md)** — core を新しいプラットフォームに統合する方法（英語）
+- **[Blink プロトコル仕様](./doc/protocol.ja.md)** — transport 非依存のワイヤプロトコル
+- **[mruby API 仕様](./doc/mruby_api.ja.md)** — core が提供する Ruby クラスとメソッド
+- **[Bluetooth 通信仕様](./doc/bluetooth_specification.ja.md)** — Blink プロトコルの BLE binding
 - **[DeepWiki](https://deepwiki.com/OpenBlink/openblink)** — コードベースを理解するための AI 駆動の包括的ドキュメント
 - **[doc/](./doc)** — ドキュメントディレクトリ全体（翻訳版を含む）
 
 ## コントリビューション
 
-コントリビューションを歓迎します！GitHub の [Issues](https://github.com/OpenBlink/openblink/issues) や [Pull Requests](https://github.com/OpenBlink/openblink/pulls) からお気軽にどうぞ。バグ報告の際は、ボードターゲット、SDK バージョン、再現手順をご記入ください。
+コントリビューションを歓迎します！GitHub の [Issues](https://github.com/OpenBlink/openblink/issues) や [Pull Requests](https://github.com/OpenBlink/openblink/pulls) からお気軽にどうぞ。バグ報告の際は、プラットフォーム、ツールチェーンバージョン、再現手順をご記入ください。
 
 ## ライセンス
 
@@ -187,4 +151,3 @@ OpenBlink は **BSD 3-Clause License** の下で公開されています。全�
 
 - **ViXion Blink** — OpenBlink は ViXion Blink からフォークされています
 - **[mruby/c](https://github.com/mrubyc/mrubyc)** — マイコン向け軽量 Ruby VM
-- **[Zephyr RTOS](https://www.zephyrproject.org/)** および **[nRF Connect SDK](https://www.nordicsemi.com/Products/Development-software/nrf-connect-sdk)** — 基盤となる RTOS と SDK
